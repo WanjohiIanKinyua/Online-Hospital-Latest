@@ -57,6 +57,7 @@ function Consultation() {
   const remoteStreamRef = useRef(null);
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const remoteAudioRef = useRef(null);
   const micEnabledRef = useRef(true);
   const cameraEnabledRef = useRef(true);
   const meetingEndedRef = useRef(false);
@@ -152,6 +153,30 @@ function Consultation() {
     Boolean(targetClientId) && getMeetingClientId() < targetClientId
   );
 
+  const findSenderByKind = (pc, kind) => {
+    const trackSender = pc.getSenders().find((sender) => sender.track?.kind === kind);
+    if (trackSender) return trackSender;
+
+    const transceiver = pc.getTransceivers?.().find((item) => (
+      item.sender?.track?.kind === kind || item.receiver?.track?.kind === kind
+    ));
+    return transceiver?.sender || null;
+  };
+
+  const ensureTransceiver = (pc, kind) => {
+    if (!pc.getTransceivers) return null;
+    const existing = pc.getTransceivers().find((item) => (
+      item.sender?.track?.kind === kind || item.receiver?.track?.kind === kind
+    ));
+    if (existing) {
+      if (existing.direction === 'inactive' || existing.direction === 'recvonly') {
+        existing.direction = 'sendrecv';
+      }
+      return existing;
+    }
+    return pc.addTransceiver(kind, { direction: 'sendrecv' });
+  };
+
   const renegotiateWithPeers = () => {
     Object.entries(peerConnectionsRef.current).forEach(([socketId, pc]) => {
       if (pc?.signalingState === 'stable') {
@@ -200,7 +225,8 @@ function Consultation() {
 
     // Replace track on all existing peer connections
     Object.values(peerConnectionsRef.current).forEach((pc) => {
-      const sender = pc.getSenders().find((item) => item.track && item.track.kind === track.kind);
+      ensureTransceiver(pc, track.kind);
+      const sender = findSenderByKind(pc, track.kind);
       if (sender) {
         sender.replaceTrack(track).catch((err) => {
           console.error(`replaceTrack ${track.kind} failed on existing PC:`, err);
@@ -557,12 +583,19 @@ function Consultation() {
     const pc = new RTCPeerConnection(RTC_CONFIG);
     peerConnectionsRef.current[targetSocketId] = pc;
 
+    ensureTransceiver(pc, 'audio');
+    ensureTransceiver(pc, 'video');
+
     // Add local tracks
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => {
         try {
-          const sender = pc.getSenders().find((s) => s.track && s.track.kind === track.kind);
-          if (!sender) {
+          const sender = findSenderByKind(pc, track.kind);
+          if (sender) {
+            sender.replaceTrack(track).catch((err) => {
+              console.error(`replaceTrack ${track.kind} for ${targetSocketId}:`, err);
+            });
+          } else {
             pc.addTrack(track, localStreamRef.current);
           }
         } catch (err) {
@@ -762,7 +795,7 @@ function Consultation() {
       console.log('Set remote video srcObject');
     }
 
-    remoteVideoRef.current.muted = false;
+    remoteVideoRef.current.muted = true;
     remoteVideoRef.current.autoplay = true;
     remoteVideoRef.current.playsInline = true;
 
@@ -778,21 +811,38 @@ function Consultation() {
       }
     }
 
-    // If we have audio tracks but playback was blocked, keep track
-    if (audioTracks.length > 0 && remotePlaybackTriedRef.current === false) {
-      remotePlaybackTriedRef.current = true;
+    if (remoteAudioRef.current && remoteAudioRef.current.srcObject !== stream) {
+      remoteAudioRef.current.srcObject = stream;
     }
 
     if (audioTracks.length > 0) {
       setRemoteHasAudio(true);
+      if (remoteAudioRef.current && remotePlaybackTriedRef.current === false) {
+        remotePlaybackTriedRef.current = true;
+        try {
+          remoteAudioRef.current.muted = false;
+          await remoteAudioRef.current.play();
+          setRemotePlaybackBlocked(false);
+        } catch (audioPlayErr) {
+          if (audioPlayErr.name === 'NotAllowedError') {
+            setRemotePlaybackBlocked(true);
+          }
+        }
+      }
     }
   };
 
   const enableRemotePlayback = async () => {
-    if (!remoteVideoRef.current || !remoteStreamRef.current) return;
+    if (!remoteStreamRef.current) return;
     try {
-      remoteVideoRef.current.muted = false;
-      await remoteVideoRef.current.play();
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.muted = true;
+        await remoteVideoRef.current.play();
+      }
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.muted = false;
+        await remoteAudioRef.current.play();
+      }
       setRemotePlaybackBlocked(false);
       setError('');
     } catch (playErr) {
@@ -818,7 +868,8 @@ function Consultation() {
   const replaceVideoTrackForPeers = (track) => {
     Object.entries(peerConnectionsRef.current).forEach(([socketId, pc]) => {
       if (!pc) return;
-      const sender = pc.getSenders().find((s) => s.track && s.track.kind === 'video');
+      ensureTransceiver(pc, 'video');
+      const sender = findSenderByKind(pc, 'video');
       if (sender) {
         sender.replaceTrack(track).catch((err) => {
           console.error('Failed to replace video track:', err);
@@ -1056,13 +1107,14 @@ function Consultation() {
                 <FiVideoOff /> Camera Off
               </span>
             )}
-            {!remoteHasAudio && remoteParticipant && (
+            {!remoteHasAudio && remoteParticipant && remoteParticipant.micEnabled !== false && (
               <span className="video-status-pill">
-                <FiVolumeX /> No Audio
+                <FiVolumeX /> Audio connecting
               </span>
             )}
           </div>
-          <video ref={remoteVideoRef} autoPlay playsInline className="video-element" />
+          <video ref={remoteVideoRef} autoPlay muted playsInline className="video-element" />
+          <audio ref={remoteAudioRef} autoPlay />
           {remotePlaybackBlocked && (
             <button type="button" className="waiting-overlay playback-overlay" onClick={enableRemotePlayback}>
               Click to enable sound and video
