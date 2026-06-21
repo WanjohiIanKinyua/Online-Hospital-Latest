@@ -352,6 +352,7 @@ function Consultation() {
       }
 
       if (signal.type === 'webrtc-offer' && fromClientId && payload.offer) {
+        console.log('Received offer from:', fromClientId);
         const pc = createPeerConnection(fromClientId, false);
         if (pc.signalingState !== 'stable') {
           try {
@@ -360,16 +361,19 @@ function Consultation() {
             console.warn('Offer rollback skipped:', rollbackError);
           }
         }
+        console.log('Setting remote description for offer');
         await pc.setRemoteDescription(new RTCSessionDescription(payload.offer));
         await flushPendingIceCandidates(fromClientId);
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
+        console.log('Sending answer to:', fromClientId);
         await sendSignal(fromClientId, 'webrtc-answer', {
           answer: pc.localDescription?.toJSON ? pc.localDescription.toJSON() : pc.localDescription
         });
       }
 
       if (signal.type === 'webrtc-answer' && fromClientId && payload.answer) {
+        console.log('Received answer from:', fromClientId);
         const pc = peerConnectionsRef.current[fromClientId];
         if (pc) {
           await pc.setRemoteDescription(new RTCSessionDescription(payload.answer));
@@ -461,7 +465,9 @@ function Consultation() {
 
   const startMeeting = async () => {
     try {
+      console.log('Starting meeting...');
       const mediaStatus = await requestInitialMedia();
+      console.log('Media acquired. Mic:', mediaStatus.micEnabled, 'Camera:', mediaStatus.cameraEnabled);
 
       const response = await axios.post(
         meetingUrl('/join'),
@@ -475,13 +481,16 @@ function Consultation() {
       );
 
       const existingParticipants = (response.data.participants || []).map(normalizeParticipant);
+      console.log('Existing participants:', existingParticipants.length);
       setParticipants(existingParticipants);
       existingParticipants.forEach((participant) => {
+        console.log('Creating peer connection to:', participant.socketId);
         createPeerConnection(participant.socketId, true);
       });
 
       startMeetingPolling();
     } catch (mediaError) {
+      console.error('Meeting start error:', mediaError);
       setError(
         mediaError.response?.data?.error ||
         'Could not enter the consultation room. Please reload and try again.'
@@ -498,9 +507,14 @@ function Consultation() {
         (s) => s.track && s.track.kind === track.kind
       );
       
-      if (!sender && pc.signalingState === 'stable') {
-        // Only add if not already present
-        pc.addTrack(track, localStreamRef.current);
+      if (!sender) {
+        // Add track immediately, regardless of state
+        try {
+          pc.addTrack(track, localStreamRef.current);
+          console.log('Added', track.kind, 'track to peer connection');
+        } catch (err) {
+          console.error(`Failed to add ${track.kind} track:`, err);
+        }
       }
     });
   };
@@ -510,16 +524,16 @@ function Consultation() {
       return peerConnectionsRef.current[targetSocketId];
     }
 
+    console.log('Creating peer connection to:', targetSocketId);
     const pc = new RTCPeerConnection(RTC_CONFIG);
     peerConnectionsRef.current[targetSocketId] = pc;
 
-    // Add local tracks after a small delay to ensure they're ready
-    setTimeout(() => {
-      ensureLocalTracksForPeer(pc);
-    }, 100);
+    // Add local tracks immediately
+    ensureLocalTracksForPeer(pc);
 
     pc.ontrack = (event) => {
       const [remoteStream] = event.streams;
+      console.log('ontrack fired, track kind:', event.track?.kind, 'stream count:', event.streams.length);
       if (remoteStream) {
         attachRemoteStream(remoteStream);
       }
@@ -552,17 +566,17 @@ function Consultation() {
     };
 
     if (shouldCreateOffer) {
-      // Delay offer creation to allow tracks to be added
-      setTimeout(() => {
-        sendOffer(targetSocketId, pc);
-      }, 150);
+      console.log('Should create offer, initiating...');
+      sendOffer(targetSocketId, pc);
     } else {
       const shouldSendFallbackOffer = getMeetingClientId() > targetSocketId;
       if (shouldSendFallbackOffer) {
+        console.log('Will send fallback offer after timeout');
         offerRetryTimersRef.current[targetSocketId] = setTimeout(() => {
           const currentPc = peerConnectionsRef.current[targetSocketId];
           if (!currentPc) return;
           if (currentPc.currentRemoteDescription) return;
+          console.log('Sending fallback offer');
           sendOffer(targetSocketId, currentPc);
         }, 1200);
       }
@@ -573,10 +587,19 @@ function Consultation() {
 
   const sendOffer = (targetSocketId, pc) => {
     if (!pc || meetingEndedRef.current) return;
+    if (pc.signalingState !== 'stable') {
+      console.log('Skipping offer, signaling state is:', pc.signalingState);
+      return;
+    }
 
-    pc.createOffer()
-      .then((offer) => pc.setLocalDescription(offer).then(() => offer))
+    console.log('Creating offer for:', targetSocketId, 'local track count:', localStreamRef.current?.getTracks().length || 0);
+    pc.createOffer({ iceRestart: false })
+      .then((offer) => {
+        console.log('Offer created, setting local description');
+        return pc.setLocalDescription(offer);
+      })
       .then(() => {
+        console.log('Sending offer to:', targetSocketId);
         sendSignal(targetSocketId, 'webrtc-offer', {
           offer: pc.localDescription?.toJSON ? pc.localDescription.toJSON() : pc.localDescription
         });
@@ -654,17 +677,19 @@ function Consultation() {
 
   const attachLocalStream = async (stream) => {
     if (!localVideoRef.current) return;
+    console.log('Attaching local stream, track count:', stream?.getTracks?.().length || 0);
     localVideoRef.current.srcObject = stream;
     try {
       await localVideoRef.current.play();
     } catch (playErr) {
-      // Browsers can block autoplay until user gesture; keep stream attached.
+      console.warn('Local playback error:', playErr);
     }
   };
 
   const attachRemoteStream = async (stream) => {
     remoteStreamRef.current = stream;
     if (!remoteVideoRef.current) return;
+    console.log('Attaching remote stream, track count:', stream?.getTracks?.().length || 0, 'video tracks:', stream?.getVideoTracks?.().length || 0);
     if (remoteVideoRef.current.srcObject !== stream) {
       remoteVideoRef.current.srcObject = stream;
     }
@@ -672,6 +697,7 @@ function Consultation() {
       await remoteVideoRef.current.play();
       setRemotePlaybackBlocked(false);
     } catch (playErr) {
+      console.warn('Remote playback error:', playErr);
       setRemotePlaybackBlocked(true);
     }
   };
