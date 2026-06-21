@@ -52,6 +52,7 @@ function Consultation() {
   const pollIntervalRef = useRef(null);
   const heartbeatIntervalRef = useRef(null);
   const peerConnectionsRef = useRef({});
+  const remoteMediaStreamsRef = useRef({}); // Dedicated remote stream for each peer
   const localStreamRef = useRef(null);
   const remoteStreamRef = useRef(null);
   const localVideoRef = useRef(null);
@@ -212,14 +213,18 @@ function Consultation() {
     ensureLocalStream();
 
     try {
-      await acquireAudioTrack();
+      const track = await acquireAudioTrack();
+      console.log('Audio track acquired, enabled:', track.enabled);
     } catch (audioError) {
+      console.error('Audio acquisition error:', audioError);
       failures.push('microphone');
     }
 
     try {
-      await acquireVideoTrack();
+      const track = await acquireVideoTrack();
+      console.log('Video track acquired, enabled:', track.enabled);
     } catch (videoError) {
+      console.error('Video acquisition error:', videoError);
       failures.push('camera');
     }
 
@@ -232,6 +237,7 @@ function Consultation() {
       setMediaWarning('');
     }
 
+    console.log('Initial media requested. Mic:', status.micEnabled, 'Camera:', status.cameraEnabled, 'Local tracks:', localStreamRef.current.getTracks().length);
     return status;
   };
 
@@ -499,10 +505,15 @@ function Consultation() {
   };
 
   const ensureLocalTracksForPeer = (pc) => {
-    if (!pc || !localStreamRef.current) return;
+    if (!pc || !localStreamRef.current) {
+      console.warn('ensureLocalTracksForPeer: pc or localStream missing');
+      return;
+    }
     const localTracks = localStreamRef.current.getTracks();
+    console.log('ensureLocalTracksForPeer: found', localTracks.length, 'local tracks');
     
     localTracks.forEach((track) => {
+      console.log('Processing track:', track.kind, 'enabled:', track.enabled, 'ready:', track.readyState);
       const sender = pc.getSenders().find(
         (s) => s.track && s.track.kind === track.kind
       );
@@ -511,10 +522,12 @@ function Consultation() {
         // Add track immediately, regardless of state
         try {
           pc.addTrack(track, localStreamRef.current);
-          console.log('Added', track.kind, 'track to peer connection');
+          console.log('Successfully added', track.kind, 'track to peer connection, total senders:', pc.getSenders().length);
         } catch (err) {
           console.error(`Failed to add ${track.kind} track:`, err);
         }
+      } else {
+        console.log('Sender already exists for', track.kind, 'track');
       }
     });
   };
@@ -528,14 +541,29 @@ function Consultation() {
     const pc = new RTCPeerConnection(RTC_CONFIG);
     peerConnectionsRef.current[targetSocketId] = pc;
 
+    // Create a dedicated remote media stream for this peer
+    remoteMediaStreamsRef.current[targetSocketId] = new MediaStream();
+
     // Add local tracks immediately
     ensureLocalTracksForPeer(pc);
 
     pc.ontrack = (event) => {
-      const [remoteStream] = event.streams;
-      console.log('ontrack fired, track kind:', event.track?.kind, 'stream count:', event.streams.length);
-      if (remoteStream) {
-        attachRemoteStream(remoteStream);
+      console.log('ontrack fired, track kind:', event.track?.kind, 'enabled:', event.track?.enabled);
+      if (event.track) {
+        // Add the track to our dedicated remote stream
+        const remoteStream = remoteMediaStreamsRef.current[targetSocketId];
+        if (remoteStream) {
+          // Check if track already exists to avoid duplicates
+          const existingTrack = remoteStream.getTracks().find(
+            (t) => t.kind === event.track.kind && t.id === event.track.id
+          );
+          if (!existingTrack) {
+            remoteStream.addTrack(event.track);
+            console.log('Added', event.track.kind, 'track to remote stream, total tracks:', remoteStream.getTracks().length);
+          }
+        }
+        // Attach the stream with all accumulated tracks
+        attachRemoteStream(remoteMediaStreamsRef.current[targetSocketId]);
       }
     };
 
@@ -623,6 +651,14 @@ function Consultation() {
       pc.close();
       delete peerConnectionsRef.current[socketId];
     }
+    
+    // Clean up remote stream for this peer
+    const remoteStream = remoteMediaStreamsRef.current[socketId];
+    if (remoteStream) {
+      remoteStream.getTracks().forEach((track) => track.stop());
+      delete remoteMediaStreamsRef.current[socketId];
+    }
+    
     delete pendingIceCandidatesRef.current[socketId];
   };
 
@@ -665,6 +701,15 @@ function Consultation() {
       closePeerConnection(socketId);
     });
 
+    // Clean up all remote streams
+    Object.keys(remoteMediaStreamsRef.current).forEach((socketId) => {
+      const stream = remoteMediaStreamsRef.current[socketId];
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    });
+    remoteMediaStreamsRef.current = {};
+
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => track.stop());
       localStreamRef.current = null;
@@ -688,16 +733,30 @@ function Consultation() {
 
   const attachRemoteStream = async (stream) => {
     remoteStreamRef.current = stream;
-    if (!remoteVideoRef.current) return;
-    console.log('Attaching remote stream, track count:', stream?.getTracks?.().length || 0, 'video tracks:', stream?.getVideoTracks?.().length || 0);
+    if (!remoteVideoRef.current) {
+      console.warn('Remote video ref not available');
+      return;
+    }
+    
+    const videoTracks = stream?.getVideoTracks?.() || [];
+    const audioTracks = stream?.getAudioTracks?.() || [];
+    console.log('Attaching remote stream - video tracks:', videoTracks.length, 'audio tracks:', audioTracks.length, 'video tracks enabled:', videoTracks.map((t) => t.enabled));
+    
     if (remoteVideoRef.current.srcObject !== stream) {
       remoteVideoRef.current.srcObject = stream;
+      console.log('Set video element srcObject to remote stream');
     }
+    
+    // Ensure video element is not muted but audio muting is controlled
+    remoteVideoRef.current.muted = false;
+    remoteVideoRef.current.autoplay = true;
+    
     try {
       await remoteVideoRef.current.play();
+      console.log('Remote video playing successfully');
       setRemotePlaybackBlocked(false);
     } catch (playErr) {
-      console.warn('Remote playback error:', playErr);
+      console.warn('Remote playback error:', playErr.message);
       setRemotePlaybackBlocked(true);
     }
   };
