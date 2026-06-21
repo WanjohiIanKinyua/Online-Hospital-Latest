@@ -47,12 +47,12 @@ function Consultation() {
   const [cameraControlledByAdmin, setCameraControlledByAdmin] = useState(false);
   const [mediaWarning, setMediaWarning] = useState('');
   const [remotePlaybackBlocked, setRemotePlaybackBlocked] = useState(false);
+  const [remoteHasAudio, setRemoteHasAudio] = useState(false);
 
   const meetingClientIdRef = useRef(null);
   const pollIntervalRef = useRef(null);
   const heartbeatIntervalRef = useRef(null);
   const peerConnectionsRef = useRef({});
-  const remoteMediaStreamsRef = useRef({}); // Dedicated remote stream for each peer
   const localStreamRef = useRef(null);
   const remoteStreamRef = useRef(null);
   const localVideoRef = useRef(null);
@@ -62,7 +62,8 @@ function Consultation() {
   const meetingEndedRef = useRef(false);
   const participantsRef = useRef([]);
   const pendingIceCandidatesRef = useRef({});
-  const negotiationTimersRef = useRef({});
+  const remotePlaybackTriedRef = useRef(false);
+  const remoteAttachTaskRef = useRef(null);
 
   const token = localStorage.getItem('token');
   const userRole = localStorage.getItem('userRole');
@@ -70,11 +71,11 @@ function Consultation() {
 
   const roomId = `appointment-${appointmentId}`;
   const isAdmin = userRole === 'admin';
-  const offerRetryTimersRef = useRef({});
   const endRedirectTimerRef = useRef(null);
   const remoteParticipant = participants[0] || null;
   const patientParticipant = participants.find((p) => p.role === 'patient') || null;
 
+  // Keep refs in sync with state
   useEffect(() => {
     micEnabledRef.current = micEnabled;
   }, [micEnabled]);
@@ -87,18 +88,20 @@ function Consultation() {
     participantsRef.current = participants;
   }, [participants]);
 
+  // Re-attach streams after loading completes (refs are now available)
   useEffect(() => {
     if (loading) return;
     if (localStreamRef.current) {
-      attachLocalStream(localStreamRef.current);
+      attachLocalStream(localStreamRef.current).catch(() => {});
     }
-    if (remoteStreamRef.current) {
-      attachRemoteStream(remoteStreamRef.current);
+    if (remoteStreamRef.current && remoteStreamRef.current.getTracks().length > 0) {
+      attachRemoteStream(remoteStreamRef.current).catch(() => {});
     }
   },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   [loading]);
 
+  // Main mount effect
   useEffect(() => {
     let mounted = true;
 
@@ -130,6 +133,8 @@ function Consultation() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   [appointmentId]);
 
+  // ---- Utility ----
+
   const getMeetingClientId = () => {
     if (!meetingClientIdRef.current) {
       meetingClientIdRef.current = createClientId();
@@ -142,6 +147,20 @@ function Consultation() {
   const authHeaders = () => ({
     Authorization: `Bearer ${token}`
   });
+
+  const shouldCreateOfferTo = (targetClientId) => (
+    Boolean(targetClientId) && getMeetingClientId() < targetClientId
+  );
+
+  const renegotiateWithPeers = () => {
+    Object.entries(peerConnectionsRef.current).forEach(([socketId, pc]) => {
+      if (pc?.signalingState === 'stable') {
+        createAndSendOffer(socketId, pc);
+      }
+    });
+  };
+
+  // ---- Media ----
 
   const getMediaStatus = (stream = localStreamRef.current) => {
     const audioTrack = stream?.getAudioTracks?.()[0];
@@ -170,6 +189,8 @@ function Consultation() {
 
   const addOrReplaceLocalTrack = (track) => {
     const stream = ensureLocalStream();
+
+    // Remove existing track of same kind from local stream
     const existingTrack = stream.getTracks().find((item) => item.kind === track.kind);
     if (existingTrack) {
       stream.removeTrack(existingTrack);
@@ -177,12 +198,19 @@ function Consultation() {
     }
     stream.addTrack(track);
 
+    // Replace track on all existing peer connections
     Object.values(peerConnectionsRef.current).forEach((pc) => {
       const sender = pc.getSenders().find((item) => item.track && item.track.kind === track.kind);
       if (sender) {
-        sender.replaceTrack(track).catch(() => {});
+        sender.replaceTrack(track).catch((err) => {
+          console.error(`replaceTrack ${track.kind} failed on existing PC:`, err);
+        });
       } else {
-        pc.addTrack(track, stream);
+        try {
+          pc.addTrack(track, stream);
+        } catch (err) {
+          console.error(`addTrack ${track.kind} on existing PC:`, err);
+        }
       }
     });
   };
@@ -198,7 +226,7 @@ function Consultation() {
 
   const acquireVideoTrack = async () => {
     const videoStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user' },
+      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
       audio: false
     });
     const track = videoStream.getVideoTracks()[0];
@@ -228,7 +256,7 @@ function Consultation() {
       failures.push('camera');
     }
 
-    await attachLocalStream(localStreamRef.current);
+    await attachLocalStream(localStreamRef.current).catch(() => {});
     const status = updateMediaStateFromStream(localStreamRef.current);
 
     if (failures.length > 0) {
@@ -241,26 +269,7 @@ function Consultation() {
     return status;
   };
 
-  const renegotiateWithPeers = () => {
-    Object.entries(peerConnectionsRef.current).forEach(([socketId, pc]) => {
-      if (!pc || pc.signalingState !== 'stable') return;
-      if (negotiationTimersRef.current[socketId]) {
-        clearTimeout(negotiationTimersRef.current[socketId]);
-      }
-      negotiationTimersRef.current[socketId] = setTimeout(() => {
-        delete negotiationTimersRef.current[socketId];
-        const currentPc = peerConnectionsRef.current[socketId];
-        if (currentPc && currentPc.signalingState === 'stable') {
-          sendOffer(socketId, currentPc);
-        }
-      }, 250);
-    });
-  };
-
-  const normalizeParticipant = (participant) => ({
-    ...participant,
-    socketId: participant.socketId || participant.clientId
-  });
+  // ---- Signalling ----
 
   const sendSignal = async (targetClientId, type, payload) => {
     const clientId = getMeetingClientId();
@@ -269,12 +278,7 @@ function Consultation() {
     try {
       await axios.post(
         meetingUrl('/signals'),
-        {
-          clientId,
-          targetClientId,
-          type,
-          payload
-        },
+        { clientId, targetClientId, type, payload },
         { headers: authHeaders() }
       );
     } catch (signalError) {
@@ -282,8 +286,13 @@ function Consultation() {
     }
   };
 
+  // ---- Participant management ----
+
   const reconcileParticipants = (nextParticipants) => {
-    const normalized = (nextParticipants || []).map(normalizeParticipant);
+    const normalized = (nextParticipants || []).map((p) => ({
+      ...p,
+      socketId: p.socketId || p.clientId
+    }));
     const activeIds = new Set(normalized.map((participant) => participant.socketId));
 
     Object.keys(peerConnectionsRef.current).forEach((socketId) => {
@@ -295,28 +304,11 @@ function Consultation() {
     setParticipants(normalized);
 
     normalized.forEach((participant) => {
+      if (participant.socketId === getMeetingClientId()) return;
       if (!peerConnectionsRef.current[participant.socketId]) {
-        createPeerConnection(participant.socketId, false);
-      } else {
-        ensureLocalTracksForPeer(peerConnectionsRef.current[participant.socketId]);
+        createPeerConnection(participant.socketId, shouldCreateOfferTo(participant.socketId));
       }
     });
-  };
-
-  const upsertParticipant = (participant) => {
-    if (!participant) return;
-      const normalized = normalizeParticipant(participant);
-    if (normalized.socketId === getMeetingClientId()) return;
-    setParticipants((prev) => {
-      const others = prev.filter((p) => p.socketId !== normalized.socketId);
-      return [...others, normalized];
-    });
-
-    if (!peerConnectionsRef.current[normalized.socketId]) {
-      createPeerConnection(normalized.socketId, false);
-    } else {
-      ensureLocalTracksForPeer(peerConnectionsRef.current[normalized.socketId]);
-    }
   };
 
   const handleMeetingEnded = (endedBy) => {
@@ -327,6 +319,10 @@ function Consultation() {
 
     if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
+    if (remoteAttachTaskRef.current) {
+      clearTimeout(remoteAttachTaskRef.current);
+      remoteAttachTaskRef.current = null;
+    }
 
     if (isAdmin) {
       endRedirectTimerRef.current = setTimeout(() => {
@@ -344,12 +340,26 @@ function Consultation() {
       const payload = signal.payload || {};
       const fromClientId = signal.fromClientId;
 
-      if (signal.type === 'participant-joined') {
-        upsertParticipant(payload.participant);
+      if (signal.type === 'participant-joined' && fromClientId) {
+        if (fromClientId === getMeetingClientId()) continue;
+        if (peerConnectionsRef.current[fromClientId]) continue;
+        createPeerConnection(fromClientId, shouldCreateOfferTo(fromClientId));
       }
 
-      if (signal.type === 'participant-updated') {
-        upsertParticipant(payload.participant);
+      if (signal.type === 'participant-updated' && payload.participant) {
+        const p = { ...payload.participant, socketId: payload.participant.socketId || payload.participant.clientId };
+        setParticipants((prev) => {
+          const idx = prev.findIndex((x) => x.socketId === p.socketId);
+          if (idx >= 0) {
+            const copy = [...prev];
+            copy[idx] = p;
+            return copy;
+          }
+          return prev;
+        });
+        if (p.socketId !== getMeetingClientId() && !peerConnectionsRef.current[p.socketId]) {
+          createPeerConnection(p.socketId, shouldCreateOfferTo(p.socketId));
+        }
       }
 
       if (signal.type === 'participant-left' && fromClientId) {
@@ -359,31 +369,52 @@ function Consultation() {
 
       if (signal.type === 'webrtc-offer' && fromClientId && payload.offer) {
         console.log('Received offer from:', fromClientId);
-        const pc = createPeerConnection(fromClientId, false);
-        if (pc.signalingState !== 'stable') {
+        const pc = getOrCreatePC(fromClientId);
+        const offerCollision = pc.signalingState !== 'stable';
+        const shouldIgnoreOffer = offerCollision && shouldCreateOfferTo(fromClientId);
+
+        if (shouldIgnoreOffer) {
+          console.warn('Ignoring colliding offer from:', fromClientId);
+          continue;
+        }
+
+        if (offerCollision) {
           try {
             await pc.setLocalDescription({ type: 'rollback' });
           } catch (rollbackError) {
             console.warn('Offer rollback skipped:', rollbackError);
           }
         }
-        console.log('Setting remote description for offer');
-        await pc.setRemoteDescription(new RTCSessionDescription(payload.offer));
-        await flushPendingIceCandidates(fromClientId);
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        console.log('Sending answer to:', fromClientId);
-        await sendSignal(fromClientId, 'webrtc-answer', {
-          answer: pc.localDescription?.toJSON ? pc.localDescription.toJSON() : pc.localDescription
-        });
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(payload.offer));
+          console.log('Remote description set for offer from:', fromClientId);
+          await flushPendingIceCandidates(fromClientId);
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          console.log('Sending answer to:', fromClientId);
+          await sendSignal(fromClientId, 'webrtc-answer', {
+            answer: pc.localDescription?.toJSON ? pc.localDescription.toJSON() : pc.localDescription
+          });
+        } catch (err) {
+          console.error('Error handling offer:', err);
+        }
       }
 
       if (signal.type === 'webrtc-answer' && fromClientId && payload.answer) {
         console.log('Received answer from:', fromClientId);
         const pc = peerConnectionsRef.current[fromClientId];
         if (pc) {
-          await pc.setRemoteDescription(new RTCSessionDescription(payload.answer));
-          await flushPendingIceCandidates(fromClientId);
+          try {
+            if (pc.signalingState !== 'have-local-offer') {
+              console.warn('Ignoring answer while signaling state is:', pc.signalingState);
+              continue;
+            }
+            await pc.setRemoteDescription(new RTCSessionDescription(payload.answer));
+            console.log('Remote description set for answer from:', fromClientId);
+            await flushPendingIceCandidates(fromClientId);
+          } catch (err) {
+            console.error('Error setting answer:', err);
+          }
         }
       }
 
@@ -431,7 +462,7 @@ function Consultation() {
       await handleSignals(response.data.signals || []);
     } catch (pollError) {
       if (!meetingEndedRef.current) {
-        setError(pollError.response?.data?.error || 'Meeting connection is retrying...');
+        console.error('Poll error:', pollError.response?.data?.error || pollError.message);
       }
     }
   };
@@ -440,7 +471,7 @@ function Consultation() {
     if (meetingEndedRef.current) return;
 
     try {
-      const response = await axios.post(
+      await axios.post(
         meetingUrl('/heartbeat'),
         {
           clientId: getMeetingClientId(),
@@ -450,11 +481,8 @@ function Consultation() {
         },
         { headers: authHeaders() }
       );
-      reconcileParticipants(response.data.participants || []);
     } catch (heartbeatError) {
-      if (!meetingEndedRef.current) {
-        setError(heartbeatError.response?.data?.error || 'Meeting connection is retrying...');
-      }
+      console.error('Heartbeat error:', heartbeatError.response?.data?.error || heartbeatError.message);
     }
   };
 
@@ -486,12 +514,17 @@ function Consultation() {
         { headers: authHeaders() }
       );
 
-      const existingParticipants = (response.data.participants || []).map(normalizeParticipant);
+      const existingParticipants = (response.data.participants || []).map((p) => ({
+        ...p,
+        socketId: p.socketId || p.clientId
+      }));
       console.log('Existing participants:', existingParticipants.length);
       setParticipants(existingParticipants);
+
+      // Create peer connections to all existing participants
       existingParticipants.forEach((participant) => {
-        console.log('Creating peer connection to:', participant.socketId);
-        createPeerConnection(participant.socketId, true);
+        if (participant.socketId === getMeetingClientId()) return;
+        createPeerConnection(participant.socketId, shouldCreateOfferTo(participant.socketId));
       });
 
       startMeetingPolling();
@@ -504,66 +537,75 @@ function Consultation() {
     }
   };
 
-  const ensureLocalTracksForPeer = (pc) => {
-    if (!pc || !localStreamRef.current) {
-      console.warn('ensureLocalTracksForPeer: pc or localStream missing');
-      return;
-    }
-    const localTracks = localStreamRef.current.getTracks();
-    console.log('ensureLocalTracksForPeer: found', localTracks.length, 'local tracks');
-    
-    localTracks.forEach((track) => {
-      console.log('Processing track:', track.kind, 'enabled:', track.enabled, 'ready:', track.readyState);
-      const sender = pc.getSenders().find(
-        (s) => s.track && s.track.kind === track.kind
-      );
-      
-      if (!sender) {
-        // Add track immediately, regardless of state
-        try {
-          pc.addTrack(track, localStreamRef.current);
-          console.log('Successfully added', track.kind, 'track to peer connection, total senders:', pc.getSenders().length);
-        } catch (err) {
-          console.error(`Failed to add ${track.kind} track:`, err);
-        }
-      } else {
-        console.log('Sender already exists for', track.kind, 'track');
-      }
-    });
+  // ---- Peer Connection Management ----
+
+  const getOrCreatePC = (socketId) => {
+    if (peerConnectionsRef.current[socketId]) return peerConnectionsRef.current[socketId];
+    return createPeerConnection(socketId, shouldCreateOfferTo(socketId));
   };
 
-  const createPeerConnection = (targetSocketId, shouldCreateOffer) => {
+  const createPeerConnection = (targetSocketId, shouldCreateOffer = shouldCreateOfferTo(targetSocketId)) => {
     if (peerConnectionsRef.current[targetSocketId]) {
       return peerConnectionsRef.current[targetSocketId];
+    }
+
+    if (targetSocketId === getMeetingClientId()) {
+      throw new Error('Cannot create PC to self');
     }
 
     console.log('Creating peer connection to:', targetSocketId);
     const pc = new RTCPeerConnection(RTC_CONFIG);
     peerConnectionsRef.current[targetSocketId] = pc;
 
-    // Create a dedicated remote media stream for this peer
-    remoteMediaStreamsRef.current[targetSocketId] = new MediaStream();
-
-    // Add local tracks immediately
-    ensureLocalTracksForPeer(pc);
+    // Add local tracks
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((track) => {
+        try {
+          const sender = pc.getSenders().find((s) => s.track && s.track.kind === track.kind);
+          if (!sender) {
+            pc.addTrack(track, localStreamRef.current);
+          }
+        } catch (err) {
+          console.error(`addTrack ${track.kind} for ${targetSocketId}:`, err);
+        }
+      });
+    }
 
     pc.ontrack = (event) => {
-      console.log('ontrack fired, track kind:', event.track?.kind, 'enabled:', event.track?.enabled);
-      if (event.track) {
-        // Add the track to our dedicated remote stream
-        const remoteStream = remoteMediaStreamsRef.current[targetSocketId];
-        if (remoteStream) {
-          // Check if track already exists to avoid duplicates
-          const existingTrack = remoteStream.getTracks().find(
-            (t) => t.kind === event.track.kind && t.id === event.track.id
-          );
-          if (!existingTrack) {
-            remoteStream.addTrack(event.track);
-            console.log('Added', event.track.kind, 'track to remote stream, total tracks:', remoteStream.getTracks().length);
+      console.log('ontrack fired from:', targetSocketId, 'kind:', event.track?.kind);
+      if (!event.track) return;
+
+      // Get or create the remote stream
+      if (!remoteStreamRef.current) {
+        remoteStreamRef.current = new MediaStream();
+      }
+
+      // Check if this exact track is already in the stream
+      const exists = remoteStreamRef.current.getTracks().find(
+        (t) => t.kind === event.track.kind && t.id === event.track.id
+      );
+
+      if (!exists) {
+        remoteStreamRef.current.addTrack(event.track);
+        console.log(`Added ${event.track.kind} track to remote stream. Tracks:`, remoteStreamRef.current.getTracks().length);
+      }
+
+      if (event.track.kind === 'audio') {
+        setRemoteHasAudio(true);
+      }
+
+      // Always attempt to attach the combined stream
+      if (remoteVideoRef.current) {
+        attachRemoteStream(remoteStreamRef.current).catch(() => {});
+      } else {
+        // Retry after a short delay if ref isn't ready
+        if (remoteAttachTaskRef.current) clearTimeout(remoteAttachTaskRef.current);
+        remoteAttachTaskRef.current = setTimeout(() => {
+          remoteAttachTaskRef.current = null;
+          if (remoteStreamRef.current) {
+            attachRemoteStream(remoteStreamRef.current).catch(() => {});
           }
-        }
-        // Attach the stream with all accumulated tracks
-        attachRemoteStream(remoteMediaStreamsRef.current[targetSocketId]);
+        }, 300);
       }
     };
 
@@ -571,66 +613,54 @@ function Consultation() {
       if (!event.candidate) return;
       sendSignal(targetSocketId, 'webrtc-ice-candidate', {
         candidate: event.candidate.toJSON ? event.candidate.toJSON() : event.candidate
-      });
+      }).catch(() => {});
     };
 
     pc.oniceconnectionstatechange = () => {
-      if (['failed', 'disconnected'].includes(pc.iceConnectionState)) {
-        try {
-          pc.restartIce();
-        } catch (restartError) {
-          // Older browsers may not support restartIce.
-        }
+      console.log(`ICE state for ${targetSocketId}:`, pc.iceConnectionState);
+      if (pc.iceConnectionState === 'failed') {
+        // Attempt ICE restart
         if (pc.signalingState === 'stable') {
-          sendOffer(targetSocketId, pc);
+          createAndSendOffer(targetSocketId, pc);
         }
       }
     };
 
     pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'failed' && pc.signalingState === 'stable') {
-        sendOffer(targetSocketId, pc);
+      console.log(`Connection state for ${targetSocketId}:`, pc.connectionState);
+      if (pc.connectionState === 'failed') {
+        if (pc.signalingState === 'stable') {
+          createAndSendOffer(targetSocketId, pc);
+        }
+      }
+      if (pc.connectionState === 'connected') {
+        console.log(`Successfully connected to ${targetSocketId}`);
+        setError('');
       }
     };
 
     if (shouldCreateOffer) {
-      console.log('Should create offer, initiating...');
-      sendOffer(targetSocketId, pc);
-    } else {
-      const shouldSendFallbackOffer = getMeetingClientId() > targetSocketId;
-      if (shouldSendFallbackOffer) {
-        console.log('Will send fallback offer after timeout');
-        offerRetryTimersRef.current[targetSocketId] = setTimeout(() => {
-          const currentPc = peerConnectionsRef.current[targetSocketId];
-          if (!currentPc) return;
-          if (currentPc.currentRemoteDescription) return;
-          console.log('Sending fallback offer');
-          sendOffer(targetSocketId, currentPc);
-        }, 1200);
-      }
+      createAndSendOffer(targetSocketId, pc);
     }
 
     return pc;
   };
 
-  const sendOffer = (targetSocketId, pc) => {
+  const createAndSendOffer = (targetSocketId, pc) => {
     if (!pc || meetingEndedRef.current) return;
     if (pc.signalingState !== 'stable') {
-      console.log('Skipping offer, signaling state is:', pc.signalingState);
+      console.log(`Cannot create offer for ${targetSocketId}, state: ${pc.signalingState}`);
       return;
     }
 
-    console.log('Creating offer for:', targetSocketId, 'local track count:', localStreamRef.current?.getTracks().length || 0);
+    console.log(`Creating offer for ${targetSocketId}, track count:`, localStreamRef.current?.getTracks().length || 0);
     pc.createOffer({ iceRestart: false })
-      .then((offer) => {
-        console.log('Offer created, setting local description');
-        return pc.setLocalDescription(offer);
-      })
+      .then((offer) => pc.setLocalDescription(offer))
       .then(() => {
-        console.log('Sending offer to:', targetSocketId);
+        console.log(`Sending offer to ${targetSocketId}`);
         sendSignal(targetSocketId, 'webrtc-offer', {
           offer: pc.localDescription?.toJSON ? pc.localDescription.toJSON() : pc.localDescription
-        });
+        }).catch(() => {});
       })
       .catch((offerErr) => {
         console.error('Offer error:', offerErr);
@@ -638,27 +668,11 @@ function Consultation() {
   };
 
   const closePeerConnection = (socketId) => {
-    if (offerRetryTimersRef.current[socketId]) {
-      clearTimeout(offerRetryTimersRef.current[socketId]);
-      delete offerRetryTimersRef.current[socketId];
-    }
-    if (negotiationTimersRef.current[socketId]) {
-      clearTimeout(negotiationTimersRef.current[socketId]);
-      delete negotiationTimersRef.current[socketId];
-    }
     const pc = peerConnectionsRef.current[socketId];
     if (pc) {
       pc.close();
       delete peerConnectionsRef.current[socketId];
     }
-    
-    // Clean up remote stream for this peer
-    const remoteStream = remoteMediaStreamsRef.current[socketId];
-    if (remoteStream) {
-      remoteStream.getTracks().forEach((track) => track.stop());
-      delete remoteMediaStreamsRef.current[socketId];
-    }
-    
     delete pendingIceCandidatesRef.current[socketId];
   };
 
@@ -678,6 +692,11 @@ function Consultation() {
       heartbeatIntervalRef.current = null;
     }
 
+    if (remoteAttachTaskRef.current) {
+      clearTimeout(remoteAttachTaskRef.current);
+      remoteAttachTaskRef.current = null;
+    }
+
     const clientId = meetingClientIdRef.current;
     if (clientId && !meetingEndedRef.current) {
       axios.post(
@@ -687,28 +706,14 @@ function Consultation() {
       ).catch(() => {});
     }
 
-    Object.keys(offerRetryTimersRef.current).forEach((socketId) => {
-      clearTimeout(offerRetryTimersRef.current[socketId]);
-      delete offerRetryTimersRef.current[socketId];
-    });
-
-    Object.keys(negotiationTimersRef.current).forEach((socketId) => {
-      clearTimeout(negotiationTimersRef.current[socketId]);
-      delete negotiationTimersRef.current[socketId];
-    });
-
     Object.keys(peerConnectionsRef.current).forEach((socketId) => {
       closePeerConnection(socketId);
     });
 
-    // Clean up all remote streams
-    Object.keys(remoteMediaStreamsRef.current).forEach((socketId) => {
-      const stream = remoteMediaStreamsRef.current[socketId];
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-      }
-    });
-    remoteMediaStreamsRef.current = {};
+    if (remoteStreamRef.current) {
+      remoteStreamRef.current.getTracks().forEach((track) => track.stop());
+      remoteStreamRef.current = null;
+    }
 
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => track.stop());
@@ -720,8 +725,11 @@ function Consultation() {
     sendParticipantState(nextMicEnabled, nextCameraEnabled);
   };
 
+  // ---- Video element attachment ----
+
   const attachLocalStream = async (stream) => {
     if (!localVideoRef.current) return;
+    if (localVideoRef.current.srcObject === stream) return;
     console.log('Attaching local stream, track count:', stream?.getTracks?.().length || 0);
     localVideoRef.current.srcObject = stream;
     try {
@@ -732,41 +740,61 @@ function Consultation() {
   };
 
   const attachRemoteStream = async (stream) => {
-    remoteStreamRef.current = stream;
     if (!remoteVideoRef.current) {
-      console.warn('Remote video ref not available');
+      console.warn('Remote video ref not available yet, will retry');
+      if (remoteAttachTaskRef.current) clearTimeout(remoteAttachTaskRef.current);
+      remoteAttachTaskRef.current = setTimeout(() => {
+        remoteAttachTaskRef.current = null;
+        if (remoteStreamRef.current) {
+          attachRemoteStream(remoteStreamRef.current).catch(() => {});
+        }
+      }, 300);
       return;
     }
-    
+
     const videoTracks = stream?.getVideoTracks?.() || [];
     const audioTracks = stream?.getAudioTracks?.() || [];
-    console.log('Attaching remote stream - video tracks:', videoTracks.length, 'audio tracks:', audioTracks.length, 'video tracks enabled:', videoTracks.map((t) => t.enabled));
-    
+    console.log(`Attaching remote stream - video: ${videoTracks.length}, audio: ${audioTracks.length}`);
+
+    // Only set srcObject if different from current to avoid restarting playback
     if (remoteVideoRef.current.srcObject !== stream) {
       remoteVideoRef.current.srcObject = stream;
-      console.log('Set video element srcObject to remote stream');
+      console.log('Set remote video srcObject');
     }
-    
-    // Ensure video element is not muted but audio muting is controlled
+
     remoteVideoRef.current.muted = false;
     remoteVideoRef.current.autoplay = true;
-    
+    remoteVideoRef.current.playsInline = true;
+
     try {
       await remoteVideoRef.current.play();
       console.log('Remote video playing successfully');
       setRemotePlaybackBlocked(false);
     } catch (playErr) {
       console.warn('Remote playback error:', playErr.message);
-      setRemotePlaybackBlocked(true);
+      // On "NotAllowedError" the browser requires user interaction
+      if (playErr.name === 'NotAllowedError') {
+        setRemotePlaybackBlocked(true);
+      }
+    }
+
+    // If we have audio tracks but playback was blocked, keep track
+    if (audioTracks.length > 0 && remotePlaybackTriedRef.current === false) {
+      remotePlaybackTriedRef.current = true;
+    }
+
+    if (audioTracks.length > 0) {
+      setRemoteHasAudio(true);
     }
   };
 
   const enableRemotePlayback = async () => {
-    if (!remoteVideoRef.current) return;
+    if (!remoteVideoRef.current || !remoteStreamRef.current) return;
     try {
       remoteVideoRef.current.muted = false;
       await remoteVideoRef.current.play();
       setRemotePlaybackBlocked(false);
+      setError('');
     } catch (playErr) {
       setError('Browser blocked remote audio/video playback. Click the video area again or check browser site permissions.');
     }
@@ -790,25 +818,25 @@ function Consultation() {
   const replaceVideoTrackForPeers = (track) => {
     Object.entries(peerConnectionsRef.current).forEach(([socketId, pc]) => {
       if (!pc) return;
-      
       const sender = pc.getSenders().find((s) => s.track && s.track.kind === 'video');
       if (sender) {
         sender.replaceTrack(track).catch((err) => {
           console.error('Failed to replace video track:', err);
         });
       } else if (localStreamRef.current && track) {
-        // No sender exists, try to add the track
-        pc.addTrack(track, localStreamRef.current).catch((err) => {
+        try {
+          pc.addTrack(track, localStreamRef.current);
+        } catch (err) {
           console.error('Failed to add video track:', err);
-        });
+        }
       }
-      
-      // Renegotiate if connection is stable
       if (pc.signalingState === 'stable') {
-        sendOffer(socketId, pc);
+        createAndSendOffer(socketId, pc);
       }
     });
   };
+
+  // ---- Controls ----
 
   const toggleMic = (forcedState = null, forcedByAdmin = false) => {
     if (!localStreamRef.current) {
@@ -821,7 +849,7 @@ function Consultation() {
     if (nextState && audioTracks.length === 0) {
       acquireAudioTrack()
         .then(async () => {
-          await attachLocalStream(localStreamRef.current);
+          await attachLocalStream(localStreamRef.current).catch(() => {});
           const status = updateMediaStateFromStream(localStreamRef.current);
           setMediaWarning('');
           setMutedByAdmin(false);
@@ -838,7 +866,7 @@ function Consultation() {
     }
 
     audioTracks.forEach((track) => {
-      track.enabled = nextState;
+      try { track.enabled = nextState; } catch (e) { /* ignore */ }
     });
 
     setMicEnabled(nextState);
@@ -865,9 +893,8 @@ function Consultation() {
       } else {
         try {
           const freshTrack = await acquireVideoTrack();
-          await attachLocalStream(localStreamRef.current);
+          await attachLocalStream(localStreamRef.current).catch(() => {});
           replaceVideoTrackForPeers(freshTrack);
-          renegotiateWithPeers();
           setCameraEnabled(true);
           cameraEnabledRef.current = true;
         } catch (cameraError) {
@@ -879,7 +906,7 @@ function Consultation() {
       }
       setError('');
     } else if (existingVideoTrack) {
-      existingVideoTrack.enabled = false;
+      try { existingVideoTrack.enabled = false; } catch (e) { /* ignore */ }
       setCameraEnabled(false);
       cameraEnabledRef.current = false;
     }
@@ -887,7 +914,7 @@ function Consultation() {
     if (!forcedByAdmin) {
       setCameraControlledByAdmin(false);
     }
-    await attachLocalStream(localStreamRef.current);
+    await attachLocalStream(localStreamRef.current).catch(() => {});
     emitParticipantState(micEnabledRef.current, cameraEnabledRef.current);
   };
 
@@ -950,6 +977,8 @@ function Consultation() {
       setError(cameraError.response?.data?.error || 'Failed to update patient camera');
     }
   };
+
+  // ---- Render ----
 
   if (loading) {
     return <div className="loading">Loading consultation room...</div>;
@@ -1027,8 +1056,13 @@ function Consultation() {
                 <FiVideoOff /> Camera Off
               </span>
             )}
+            {!remoteHasAudio && remoteParticipant && (
+              <span className="video-status-pill">
+                <FiVolumeX /> No Audio
+              </span>
+            )}
           </div>
-          <video ref={remoteVideoRef} autoPlay muted={false} playsInline className="video-element" />
+          <video ref={remoteVideoRef} autoPlay playsInline className="video-element" />
           {remotePlaybackBlocked && (
             <button type="button" className="waiting-overlay playback-overlay" onClick={enableRemotePlayback}>
               Click to enable sound and video
