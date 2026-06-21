@@ -87,6 +87,18 @@ function Consultation() {
   }, [participants]);
 
   useEffect(() => {
+    if (loading) return;
+    if (localStreamRef.current) {
+      attachLocalStream(localStreamRef.current);
+    }
+    if (remoteStreamRef.current) {
+      attachRemoteStream(remoteStreamRef.current);
+    }
+  },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [loading]);
+
+  useEffect(() => {
     let mounted = true;
 
     const fetchAppointment = async () => {
@@ -479,9 +491,15 @@ function Consultation() {
 
   const ensureLocalTracksForPeer = (pc) => {
     if (!pc || !localStreamRef.current) return;
-    localStreamRef.current.getTracks().forEach((track) => {
-      const hasSender = pc.getSenders().some((sender) => sender.track === track || sender.track?.kind === track.kind);
-      if (!hasSender) {
+    const localTracks = localStreamRef.current.getTracks();
+    
+    localTracks.forEach((track) => {
+      const sender = pc.getSenders().find(
+        (s) => s.track && s.track.kind === track.kind
+      );
+      
+      if (!sender && pc.signalingState === 'stable') {
+        // Only add if not already present
         pc.addTrack(track, localStreamRef.current);
       }
     });
@@ -495,7 +513,10 @@ function Consultation() {
     const pc = new RTCPeerConnection(RTC_CONFIG);
     peerConnectionsRef.current[targetSocketId] = pc;
 
-    ensureLocalTracksForPeer(pc);
+    // Add local tracks after a small delay to ensure they're ready
+    setTimeout(() => {
+      ensureLocalTracksForPeer(pc);
+    }, 100);
 
     pc.ontrack = (event) => {
       const [remoteStream] = event.streams;
@@ -531,7 +552,10 @@ function Consultation() {
     };
 
     if (shouldCreateOffer) {
-      sendOffer(targetSocketId, pc);
+      // Delay offer creation to allow tracks to be added
+      setTimeout(() => {
+        sendOffer(targetSocketId, pc);
+      }, 150);
     } else {
       const shouldSendFallbackOffer = getMeetingClientId() > targetSocketId;
       if (shouldSendFallbackOffer) {
@@ -679,20 +703,24 @@ function Consultation() {
   };
 
   const replaceVideoTrackForPeers = (track) => {
-    Object.values(peerConnectionsRef.current).forEach((pc) => {
+    Object.entries(peerConnectionsRef.current).forEach(([socketId, pc]) => {
+      if (!pc) return;
+      
       const sender = pc.getSenders().find((s) => s.track && s.track.kind === 'video');
       if (sender) {
-        sender.replaceTrack(track).catch(() => {});
+        sender.replaceTrack(track).catch((err) => {
+          console.error('Failed to replace video track:', err);
+        });
       } else if (localStreamRef.current && track) {
-        pc.addTrack(track, localStreamRef.current);
-        if (pc.signalingState === 'stable') {
-          const targetSocketId = Object.keys(peerConnectionsRef.current).find(
-            (socketId) => peerConnectionsRef.current[socketId] === pc
-          );
-          if (targetSocketId) {
-            sendOffer(targetSocketId, pc);
-          }
-        }
+        // No sender exists, try to add the track
+        pc.addTrack(track, localStreamRef.current).catch((err) => {
+          console.error('Failed to add video track:', err);
+        });
+      }
+      
+      // Renegotiate if connection is stable
+      if (pc.signalingState === 'stable') {
+        sendOffer(socketId, pc);
       }
     });
   };
@@ -711,6 +739,7 @@ function Consultation() {
           await attachLocalStream(localStreamRef.current);
           const status = updateMediaStateFromStream(localStreamRef.current);
           setMediaWarning('');
+          setMutedByAdmin(false);
           emitParticipantState(status.micEnabled, status.cameraEnabled);
           renegotiateWithPeers();
         })
@@ -746,28 +775,35 @@ function Consultation() {
     if (nextState) {
       if (existingVideoTrack && existingVideoTrack.readyState === 'live') {
         existingVideoTrack.enabled = true;
+        setCameraEnabled(true);
+        cameraEnabledRef.current = true;
       } else {
         try {
           const freshTrack = await acquireVideoTrack();
+          await attachLocalStream(localStreamRef.current);
           replaceVideoTrackForPeers(freshTrack);
           renegotiateWithPeers();
+          setCameraEnabled(true);
+          cameraEnabledRef.current = true;
         } catch (cameraError) {
           setMediaWarning('Camera access is blocked. Allow camera permission in your browser, then try again.');
+          setCameraEnabled(false);
+          cameraEnabledRef.current = false;
           return;
         }
       }
       setError('');
     } else if (existingVideoTrack) {
       existingVideoTrack.enabled = false;
+      setCameraEnabled(false);
+      cameraEnabledRef.current = false;
     }
 
-    setCameraEnabled(nextState);
-    cameraEnabledRef.current = nextState;
     if (!forcedByAdmin) {
       setCameraControlledByAdmin(false);
     }
     await attachLocalStream(localStreamRef.current);
-    emitParticipantState(micEnabledRef.current, nextState);
+    emitParticipantState(micEnabledRef.current, cameraEnabledRef.current);
   };
 
   const retryMediaPermissions = async () => {
@@ -907,7 +943,7 @@ function Consultation() {
               </span>
             )}
           </div>
-          <video ref={remoteVideoRef} autoPlay playsInline className="video-element" />
+          <video ref={remoteVideoRef} autoPlay muted={false} playsInline className="video-element" />
           {remotePlaybackBlocked && (
             <button type="button" className="waiting-overlay playback-overlay" onClick={enableRemotePlayback}>
               Click to enable sound and video
