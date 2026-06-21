@@ -47,6 +47,17 @@
   color: #fecaca;
 }
 
+.inline-alert-action {
+  margin-left: 0.75rem;
+  border: 1px solid rgba(254, 202, 202, 0.7);
+  background: rgba(127, 29, 29, 0.55);
+  color: #ffffff;
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.45rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .video-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -116,6 +127,15 @@
   font-size: 0.95rem;
   color: #cbd5e1;
   background: rgba(2, 6, 23, 0.62);
+}
+
+.playback-overlay {
+  border: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  font-weight: 700;
+  color: #ffffff;
 }
 
 .meeting-controls {

@@ -5,11 +5,25 @@ import { FiArrowLeft, FiMic, FiMicOff, FiVideo, FiVideoOff, FiPhoneOff, FiVolume
 import '../styles/Consultation.css';
 import { API_BASE_URL } from '../config/api';
 
-const RTC_CONFIG = {
-  iceServers: [
+const parseIceServers = () => {
+  try {
+    const configured = process.env.REACT_APP_ICE_SERVERS;
+    if (configured) {
+      const parsed = JSON.parse(configured);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (error) {
+    // Fall back to public STUN servers below.
+  }
+
+  return [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' }
-  ],
+  ];
+};
+
+const RTC_CONFIG = {
+  iceServers: parseIceServers(),
   iceCandidatePoolSize: 4
 };
 
@@ -31,6 +45,8 @@ function Consultation() {
   const [meetingEnded, setMeetingEnded] = useState(false);
   const [mutedByAdmin, setMutedByAdmin] = useState(false);
   const [cameraControlledByAdmin, setCameraControlledByAdmin] = useState(false);
+  const [mediaWarning, setMediaWarning] = useState('');
+  const [remotePlaybackBlocked, setRemotePlaybackBlocked] = useState(false);
 
   const meetingClientIdRef = useRef(null);
   const pollIntervalRef = useRef(null);
@@ -45,6 +61,7 @@ function Consultation() {
   const meetingEndedRef = useRef(false);
   const participantsRef = useRef([]);
   const pendingIceCandidatesRef = useRef({});
+  const negotiationTimersRef = useRef({});
 
   const token = localStorage.getItem('token');
   const userRole = localStorage.getItem('userRole');
@@ -113,6 +130,115 @@ function Consultation() {
     Authorization: `Bearer ${token}`
   });
 
+  const getMediaStatus = (stream = localStreamRef.current) => {
+    const audioTrack = stream?.getAudioTracks?.()[0];
+    const videoTrack = stream?.getVideoTracks?.()[0];
+    return {
+      micEnabled: Boolean(audioTrack && audioTrack.readyState === 'live' && audioTrack.enabled),
+      cameraEnabled: Boolean(videoTrack && videoTrack.readyState === 'live' && videoTrack.enabled)
+    };
+  };
+
+  const updateMediaStateFromStream = (stream = localStreamRef.current) => {
+    const status = getMediaStatus(stream);
+    setMicEnabled(status.micEnabled);
+    setCameraEnabled(status.cameraEnabled);
+    micEnabledRef.current = status.micEnabled;
+    cameraEnabledRef.current = status.cameraEnabled;
+    return status;
+  };
+
+  const ensureLocalStream = () => {
+    if (!localStreamRef.current) {
+      localStreamRef.current = new MediaStream();
+    }
+    return localStreamRef.current;
+  };
+
+  const addOrReplaceLocalTrack = (track) => {
+    const stream = ensureLocalStream();
+    const existingTrack = stream.getTracks().find((item) => item.kind === track.kind);
+    if (existingTrack) {
+      stream.removeTrack(existingTrack);
+      existingTrack.stop();
+    }
+    stream.addTrack(track);
+
+    Object.values(peerConnectionsRef.current).forEach((pc) => {
+      const sender = pc.getSenders().find((item) => item.track && item.track.kind === track.kind);
+      if (sender) {
+        sender.replaceTrack(track).catch(() => {});
+      } else {
+        pc.addTrack(track, stream);
+      }
+    });
+  };
+
+  const acquireAudioTrack = async () => {
+    const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    const track = audioStream.getAudioTracks()[0];
+    if (!track) throw new Error('No microphone track was found.');
+    track.enabled = true;
+    addOrReplaceLocalTrack(track);
+    return track;
+  };
+
+  const acquireVideoTrack = async () => {
+    const videoStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user' },
+      audio: false
+    });
+    const track = videoStream.getVideoTracks()[0];
+    if (!track) throw new Error('No camera track was found.');
+    track.enabled = true;
+    addOrReplaceLocalTrack(track);
+    return track;
+  };
+
+  const requestInitialMedia = async () => {
+    const failures = [];
+    ensureLocalStream();
+
+    try {
+      await acquireAudioTrack();
+    } catch (audioError) {
+      failures.push('microphone');
+    }
+
+    try {
+      await acquireVideoTrack();
+    } catch (videoError) {
+      failures.push('camera');
+    }
+
+    await attachLocalStream(localStreamRef.current);
+    const status = updateMediaStateFromStream(localStreamRef.current);
+
+    if (failures.length > 0) {
+      setMediaWarning(`Please allow ${failures.join(' and ')} access, then use the controls below to enable it.`);
+    } else {
+      setMediaWarning('');
+    }
+
+    return status;
+  };
+
+  const renegotiateWithPeers = () => {
+    Object.entries(peerConnectionsRef.current).forEach(([socketId, pc]) => {
+      if (!pc || pc.signalingState !== 'stable') return;
+      if (negotiationTimersRef.current[socketId]) {
+        clearTimeout(negotiationTimersRef.current[socketId]);
+      }
+      negotiationTimersRef.current[socketId] = setTimeout(() => {
+        delete negotiationTimersRef.current[socketId];
+        const currentPc = peerConnectionsRef.current[socketId];
+        if (currentPc && currentPc.signalingState === 'stable') {
+          sendOffer(socketId, currentPc);
+        }
+      }, 250);
+    });
+  };
+
   const normalizeParticipant = (participant) => ({
     ...participant,
     socketId: participant.socketId || participant.clientId
@@ -153,6 +279,8 @@ function Consultation() {
     normalized.forEach((participant) => {
       if (!peerConnectionsRef.current[participant.socketId]) {
         createPeerConnection(participant.socketId, false);
+      } else {
+        ensureLocalTracksForPeer(peerConnectionsRef.current[participant.socketId]);
       }
     });
   };
@@ -168,6 +296,8 @@ function Consultation() {
 
     if (!peerConnectionsRef.current[normalized.socketId]) {
       createPeerConnection(normalized.socketId, false);
+    } else {
+      ensureLocalTracksForPeer(peerConnectionsRef.current[normalized.socketId]);
     }
   };
 
@@ -319,30 +449,15 @@ function Consultation() {
 
   const startMeeting = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true
-      });
-      stream.getVideoTracks().forEach((track) => {
-        track.enabled = true;
-      });
-      stream.getAudioTracks().forEach((track) => {
-        track.enabled = true;
-      });
-
-      localStreamRef.current = stream;
-      await attachLocalStream(stream);
-      setCameraEnabled(true);
-      cameraEnabledRef.current = true;
-      setMicEnabled(stream.getAudioTracks().some((track) => track.enabled));
+      const mediaStatus = await requestInitialMedia();
 
       const response = await axios.post(
         meetingUrl('/join'),
         {
           clientId: getMeetingClientId(),
           userName,
-          micEnabled: true,
-          cameraEnabled: true
+          micEnabled: mediaStatus.micEnabled,
+          cameraEnabled: mediaStatus.cameraEnabled
         },
         { headers: authHeaders() }
       );
@@ -357,9 +472,19 @@ function Consultation() {
     } catch (mediaError) {
       setError(
         mediaError.response?.data?.error ||
-        'Could not access camera/microphone. Please allow permissions and reload.'
+        'Could not enter the consultation room. Please reload and try again.'
       );
     }
+  };
+
+  const ensureLocalTracksForPeer = (pc) => {
+    if (!pc || !localStreamRef.current) return;
+    localStreamRef.current.getTracks().forEach((track) => {
+      const hasSender = pc.getSenders().some((sender) => sender.track === track || sender.track?.kind === track.kind);
+      if (!hasSender) {
+        pc.addTrack(track, localStreamRef.current);
+      }
+    });
   };
 
   const createPeerConnection = (targetSocketId, shouldCreateOffer) => {
@@ -370,11 +495,7 @@ function Consultation() {
     const pc = new RTCPeerConnection(RTC_CONFIG);
     peerConnectionsRef.current[targetSocketId] = pc;
 
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach((track) => {
-        pc.addTrack(track, localStreamRef.current);
-      });
-    }
+    ensureLocalTracksForPeer(pc);
 
     pc.ontrack = (event) => {
       const [remoteStream] = event.streams;
@@ -446,6 +567,10 @@ function Consultation() {
       clearTimeout(offerRetryTimersRef.current[socketId]);
       delete offerRetryTimersRef.current[socketId];
     }
+    if (negotiationTimersRef.current[socketId]) {
+      clearTimeout(negotiationTimersRef.current[socketId]);
+      delete negotiationTimersRef.current[socketId];
+    }
     const pc = peerConnectionsRef.current[socketId];
     if (pc) {
       pc.close();
@@ -484,6 +609,11 @@ function Consultation() {
       delete offerRetryTimersRef.current[socketId];
     });
 
+    Object.keys(negotiationTimersRef.current).forEach((socketId) => {
+      clearTimeout(negotiationTimersRef.current[socketId]);
+      delete negotiationTimersRef.current[socketId];
+    });
+
     Object.keys(peerConnectionsRef.current).forEach((socketId) => {
       closePeerConnection(socketId);
     });
@@ -516,8 +646,20 @@ function Consultation() {
     }
     try {
       await remoteVideoRef.current.play();
+      setRemotePlaybackBlocked(false);
     } catch (playErr) {
-      // Keep the stream attached; browser autoplay can recover after the next user gesture.
+      setRemotePlaybackBlocked(true);
+    }
+  };
+
+  const enableRemotePlayback = async () => {
+    if (!remoteVideoRef.current) return;
+    try {
+      remoteVideoRef.current.muted = false;
+      await remoteVideoRef.current.play();
+      setRemotePlaybackBlocked(false);
+    } catch (playErr) {
+      setError('Browser blocked remote audio/video playback. Click the video area again or check browser site permissions.');
     }
   };
 
@@ -556,10 +698,32 @@ function Consultation() {
   };
 
   const toggleMic = (forcedState = null, forcedByAdmin = false) => {
-    if (!localStreamRef.current) return;
+    if (!localStreamRef.current) {
+      ensureLocalStream();
+    }
 
     const nextState = typeof forcedState === 'boolean' ? forcedState : !micEnabledRef.current;
-    localStreamRef.current.getAudioTracks().forEach((track) => {
+    const audioTracks = localStreamRef.current.getAudioTracks();
+
+    if (nextState && audioTracks.length === 0) {
+      acquireAudioTrack()
+        .then(async () => {
+          await attachLocalStream(localStreamRef.current);
+          const status = updateMediaStateFromStream(localStreamRef.current);
+          setMediaWarning('');
+          emitParticipantState(status.micEnabled, status.cameraEnabled);
+          renegotiateWithPeers();
+        })
+        .catch(() => {
+          setMediaWarning('Microphone access is blocked. Allow microphone permission in your browser, then try again.');
+          setMicEnabled(false);
+          micEnabledRef.current = false;
+          emitParticipantState(false, cameraEnabledRef.current);
+        });
+      return;
+    }
+
+    audioTracks.forEach((track) => {
       track.enabled = nextState;
     });
 
@@ -575,9 +739,7 @@ function Consultation() {
   const toggleCamera = async (forcedState = null, forcedByAdmin = false) => {
     const nextState = typeof forcedState === 'boolean' ? forcedState : !cameraEnabledRef.current;
 
-    if (!localStreamRef.current) {
-      localStreamRef.current = new MediaStream();
-    }
+    ensureLocalStream();
 
     const existingVideoTrack = localStreamRef.current.getVideoTracks()[0];
 
@@ -586,21 +748,11 @@ function Consultation() {
         existingVideoTrack.enabled = true;
       } else {
         try {
-          const videoStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'user' },
-            audio: false
-          });
-          const freshTrack = videoStream.getVideoTracks()[0];
-          if (freshTrack) {
-            if (existingVideoTrack) {
-              localStreamRef.current.removeTrack(existingVideoTrack);
-              existingVideoTrack.stop();
-            }
-            localStreamRef.current.addTrack(freshTrack);
-            replaceVideoTrackForPeers(freshTrack);
-          }
+          const freshTrack = await acquireVideoTrack();
+          replaceVideoTrackForPeers(freshTrack);
+          renegotiateWithPeers();
         } catch (cameraError) {
-          setError('Unable to access camera. Please allow camera permission and try again.');
+          setMediaWarning('Camera access is blocked. Allow camera permission in your browser, then try again.');
           return;
         }
       }
@@ -616,6 +768,12 @@ function Consultation() {
     }
     await attachLocalStream(localStreamRef.current);
     emitParticipantState(micEnabledRef.current, nextState);
+  };
+
+  const retryMediaPermissions = async () => {
+    const status = await requestInitialMedia();
+    emitParticipantState(status.micEnabled, status.cameraEnabled);
+    renegotiateWithPeers();
   };
 
   const endMeetingAsAdmin = async () => {
@@ -705,6 +863,14 @@ function Consultation() {
       {cameraControlledByAdmin && (
         <div className="room-alert">Your camera was changed by admin.</div>
       )}
+      {mediaWarning && (
+        <div className="room-alert room-alert-danger">
+          {mediaWarning}
+          <button type="button" className="inline-alert-action" onClick={retryMediaPermissions}>
+            Enable camera/mic
+          </button>
+        </div>
+      )}
       {error && appointment && !meetingEnded && (
         <div className="room-alert room-alert-danger">{error}</div>
       )}
@@ -742,6 +908,11 @@ function Consultation() {
             )}
           </div>
           <video ref={remoteVideoRef} autoPlay playsInline className="video-element" />
+          {remotePlaybackBlocked && (
+            <button type="button" className="waiting-overlay playback-overlay" onClick={enableRemotePlayback}>
+              Click to enable sound and video
+            </button>
+          )}
           {participants.length === 0 && <div className="waiting-overlay">Waiting for other participant...</div>}
         </div>
       </div>
