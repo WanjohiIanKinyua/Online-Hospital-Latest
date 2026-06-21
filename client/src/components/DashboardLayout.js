@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -25,6 +25,7 @@ import { API_BASE_URL } from '../config/api';
 export function DashboardLayout({ children, role = 'patient' }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const sidebarNavRef = useRef(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const userEmail = localStorage.getItem('userEmail') || 'user@example.com';
@@ -67,6 +68,29 @@ export function DashboardLayout({ children, role = 'patient' }) {
   ];
 
   const links = role === 'admin' ? adminLinks : patientLinks;
+  const sidebarScrollKey = `sidebarScroll:${role}`;
+
+  useEffect(() => {
+    const nav = sidebarNavRef.current;
+    if (!nav) return undefined;
+
+    const savedScrollTop = Number(sessionStorage.getItem(sidebarScrollKey) || 0);
+    if (savedScrollTop > 0) {
+      requestAnimationFrame(() => {
+        nav.scrollTop = savedScrollTop;
+      });
+    }
+
+    const saveScrollPosition = () => {
+      sessionStorage.setItem(sidebarScrollKey, String(nav.scrollTop));
+    };
+
+    nav.addEventListener('scroll', saveScrollPosition, { passive: true });
+    return () => {
+      saveScrollPosition();
+      nav.removeEventListener('scroll', saveScrollPosition);
+    };
+  }, [sidebarScrollKey, location.pathname]);
 
   useEffect(() => {
     if (!token || !['patient', 'admin'].includes(role)) return undefined;
@@ -140,13 +164,18 @@ export function DashboardLayout({ children, role = 'patient' }) {
           </button>
         </div>
 
-        <nav className="sidebar-nav">
+        <nav className="sidebar-nav" ref={sidebarNavRef}>
           {links.map((link) => (
             <Link
               key={link.to}
               to={link.to}
               className={`nav-link ${isActive(link.to) ? 'active' : ''}`}
-              onClick={() => setSidebarOpen(false)}
+              onClick={() => {
+                if (sidebarNavRef.current) {
+                  sessionStorage.setItem(sidebarScrollKey, String(sidebarNavRef.current.scrollTop));
+                }
+                setSidebarOpen(false);
+              }}
             >
               <link.icon className="nav-icon" />
               <span className="nav-label">{link.label}</span>

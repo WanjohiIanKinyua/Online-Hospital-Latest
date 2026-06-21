@@ -6,7 +6,11 @@ import '../styles/Consultation.css';
 import { API_BASE_URL } from '../config/api';
 
 const RTC_CONFIG = {
-  iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' }
+  ],
+  iceCandidatePoolSize: 4
 };
 
 const createClientId = () => {
@@ -23,7 +27,7 @@ function Consultation() {
   const [error, setError] = useState('');
   const [participants, setParticipants] = useState([]);
   const [micEnabled, setMicEnabled] = useState(true);
-  const [cameraEnabled, setCameraEnabled] = useState(false);
+  const [cameraEnabled, setCameraEnabled] = useState(true);
   const [meetingEnded, setMeetingEnded] = useState(false);
   const [mutedByAdmin, setMutedByAdmin] = useState(false);
   const [cameraControlledByAdmin, setCameraControlledByAdmin] = useState(false);
@@ -33,12 +37,14 @@ function Consultation() {
   const heartbeatIntervalRef = useRef(null);
   const peerConnectionsRef = useRef({});
   const localStreamRef = useRef(null);
+  const remoteStreamRef = useRef(null);
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const micEnabledRef = useRef(true);
-  const cameraEnabledRef = useRef(false);
+  const cameraEnabledRef = useRef(true);
   const meetingEndedRef = useRef(false);
   const participantsRef = useRef([]);
+  const pendingIceCandidatesRef = useRef({});
 
   const token = localStorage.getItem('token');
   const userRole = localStorage.getItem('userRole');
@@ -153,7 +159,7 @@ function Consultation() {
 
   const upsertParticipant = (participant) => {
     if (!participant) return;
-    const normalized = normalizeParticipant(participant);
+      const normalized = normalizeParticipant(participant);
     if (normalized.socketId === getMeetingClientId()) return;
     setParticipants((prev) => {
       const others = prev.filter((p) => p.socketId !== normalized.socketId);
@@ -205,16 +211,27 @@ function Consultation() {
 
       if (signal.type === 'webrtc-offer' && fromClientId && payload.offer) {
         const pc = createPeerConnection(fromClientId, false);
+        if (pc.signalingState !== 'stable') {
+          try {
+            await pc.setLocalDescription({ type: 'rollback' });
+          } catch (rollbackError) {
+            console.warn('Offer rollback skipped:', rollbackError);
+          }
+        }
         await pc.setRemoteDescription(new RTCSessionDescription(payload.offer));
+        await flushPendingIceCandidates(fromClientId);
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
-        await sendSignal(fromClientId, 'webrtc-answer', { answer });
+        await sendSignal(fromClientId, 'webrtc-answer', {
+          answer: pc.localDescription?.toJSON ? pc.localDescription.toJSON() : pc.localDescription
+        });
       }
 
       if (signal.type === 'webrtc-answer' && fromClientId && payload.answer) {
         const pc = peerConnectionsRef.current[fromClientId];
         if (pc) {
           await pc.setRemoteDescription(new RTCSessionDescription(payload.answer));
+          await flushPendingIceCandidates(fromClientId);
         }
       }
 
@@ -222,7 +239,12 @@ function Consultation() {
         const pc = peerConnectionsRef.current[fromClientId];
         if (pc) {
           try {
-            await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
+            if (pc.remoteDescription) {
+              await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
+            } else {
+              pendingIceCandidatesRef.current[fromClientId] = pendingIceCandidatesRef.current[fromClientId] || [];
+              pendingIceCandidatesRef.current[fromClientId].push(payload.candidate);
+            }
           } catch (iceError) {
             console.error('ICE candidate error:', iceError);
           }
@@ -302,7 +324,7 @@ function Consultation() {
         audio: true
       });
       stream.getVideoTracks().forEach((track) => {
-        track.enabled = false;
+        track.enabled = true;
       });
       stream.getAudioTracks().forEach((track) => {
         track.enabled = true;
@@ -310,7 +332,8 @@ function Consultation() {
 
       localStreamRef.current = stream;
       await attachLocalStream(stream);
-      setCameraEnabled(false);
+      setCameraEnabled(true);
+      cameraEnabledRef.current = true;
       setMicEnabled(stream.getAudioTracks().some((track) => track.enabled));
 
       const response = await axios.post(
@@ -319,7 +342,7 @@ function Consultation() {
           clientId: getMeetingClientId(),
           userName,
           micEnabled: true,
-          cameraEnabled: false
+          cameraEnabled: true
         },
         { headers: authHeaders() }
       );
@@ -355,16 +378,35 @@ function Consultation() {
 
     pc.ontrack = (event) => {
       const [remoteStream] = event.streams;
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = remoteStream;
+      if (remoteStream) {
+        attachRemoteStream(remoteStream);
       }
     };
 
     pc.onicecandidate = (event) => {
       if (!event.candidate) return;
       sendSignal(targetSocketId, 'webrtc-ice-candidate', {
-        candidate: event.candidate
+        candidate: event.candidate.toJSON ? event.candidate.toJSON() : event.candidate
       });
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      if (['failed', 'disconnected'].includes(pc.iceConnectionState)) {
+        try {
+          pc.restartIce();
+        } catch (restartError) {
+          // Older browsers may not support restartIce.
+        }
+        if (pc.signalingState === 'stable') {
+          sendOffer(targetSocketId, pc);
+        }
+      }
+    };
+
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === 'failed' && pc.signalingState === 'stable') {
+        sendOffer(targetSocketId, pc);
+      }
     };
 
     if (shouldCreateOffer) {
@@ -389,8 +431,10 @@ function Consultation() {
 
     pc.createOffer()
       .then((offer) => pc.setLocalDescription(offer).then(() => offer))
-      .then((offer) => {
-        sendSignal(targetSocketId, 'webrtc-offer', { offer });
+      .then(() => {
+        sendSignal(targetSocketId, 'webrtc-offer', {
+          offer: pc.localDescription?.toJSON ? pc.localDescription.toJSON() : pc.localDescription
+        });
       })
       .catch((offerErr) => {
         console.error('Offer error:', offerErr);
@@ -407,6 +451,7 @@ function Consultation() {
       pc.close();
       delete peerConnectionsRef.current[socketId];
     }
+    delete pendingIceCandidatesRef.current[socketId];
   };
 
   const cleanupMeeting = () => {
@@ -463,6 +508,34 @@ function Consultation() {
     }
   };
 
+  const attachRemoteStream = async (stream) => {
+    remoteStreamRef.current = stream;
+    if (!remoteVideoRef.current) return;
+    if (remoteVideoRef.current.srcObject !== stream) {
+      remoteVideoRef.current.srcObject = stream;
+    }
+    try {
+      await remoteVideoRef.current.play();
+    } catch (playErr) {
+      // Keep the stream attached; browser autoplay can recover after the next user gesture.
+    }
+  };
+
+  const flushPendingIceCandidates = async (socketId) => {
+    const pc = peerConnectionsRef.current[socketId];
+    const candidates = pendingIceCandidatesRef.current[socketId] || [];
+    if (!pc || !pc.remoteDescription || candidates.length === 0) return;
+
+    pendingIceCandidatesRef.current[socketId] = [];
+    for (const candidate of candidates) {
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (iceError) {
+        console.error('Queued ICE candidate error:', iceError);
+      }
+    }
+  };
+
   const replaceVideoTrackForPeers = (track) => {
     Object.values(peerConnectionsRef.current).forEach((pc) => {
       const sender = pc.getSenders().find((s) => s.track && s.track.kind === 'video');
@@ -470,6 +543,14 @@ function Consultation() {
         sender.replaceTrack(track).catch(() => {});
       } else if (localStreamRef.current && track) {
         pc.addTrack(track, localStreamRef.current);
+        if (pc.signalingState === 'stable') {
+          const targetSocketId = Object.keys(peerConnectionsRef.current).find(
+            (socketId) => peerConnectionsRef.current[socketId] === pc
+          );
+          if (targetSocketId) {
+            sendOffer(targetSocketId, pc);
+          }
+        }
       }
     });
   };
