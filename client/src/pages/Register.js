@@ -73,6 +73,7 @@ function Register({ setIsAuthenticated, setUserRole }) {
 
       setIsAuthenticated(true);
       setUserRole('patient');
+      localStorage.setItem('loginSuccess', '1');
 
       navigate('/dashboard');
     } catch (err) {

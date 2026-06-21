@@ -5,6 +5,8 @@ import { FiEye, FiEyeOff } from 'react-icons/fi';
 import '../styles/AuthPages.css';
 import { API_BASE_URL } from '../config/api';
 
+const normalizeRole = (role) => String(role || '').trim().toLowerCase();
+
 function Login({ setIsAuthenticated, setUserRole }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,8 +26,14 @@ function Login({ setIsAuthenticated, setUserRole }) {
         password
       });
 
+      const role = normalizeRole(response.data.user?.role);
+
+      if (!['patient', 'admin'].includes(role)) {
+        throw new Error('Your account role is not recognized. Please contact support.');
+      }
+
       localStorage.setItem('token', response.data.token);
-      localStorage.setItem('userRole', response.data.user.role);
+      localStorage.setItem('userRole', role);
       localStorage.setItem('userId', response.data.user.id);
       const resolvedName = response.data.user.fullName || response.data.user.fullname || response.data.user.name || '';
       localStorage.setItem('userName', resolvedName);
@@ -33,15 +41,15 @@ function Login({ setIsAuthenticated, setUserRole }) {
       localStorage.setItem('loginSuccess', '1');
 
       setIsAuthenticated(true);
-      setUserRole(response.data.user.role);
+      setUserRole(role);
 
-      if (response.data.user.role === 'admin') {
+      if (role === 'admin') {
         navigate('/admin');
       } else {
         navigate('/dashboard');
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed. Please try again.');
+      setError(err.response?.data?.error || err.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }

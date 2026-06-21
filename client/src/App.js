@@ -35,6 +35,7 @@ const ACTIVITY_POLL_MS = 5000;
 
 const toNumber = (value) => Number(value || 0);
 const authHeaders = (token) => ({ Authorization: `Bearer ${token}` });
+const normalizeRole = (role) => String(role || '').trim().toLowerCase();
 
 const getLatestAppointment = (appointments = []) => {
   if (!Array.isArray(appointments) || appointments.length === 0) return null;
@@ -438,12 +439,16 @@ function App() {
 
   const checkAuth = () => {
     const token = localStorage.getItem('token');
-    const role = localStorage.getItem('userRole');
+    const role = normalizeRole(localStorage.getItem('userRole'));
     
-    if (token && role) {
+    if (token && ['patient', 'admin'].includes(role)) {
       setIsAuthenticated(true);
       setUserRole(role);
     } else {
+      if (token || role) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('userRole');
+      }
       setIsAuthenticated(false);
       setUserRole(null);
     }
