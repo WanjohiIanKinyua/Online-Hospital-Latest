@@ -1,0 +1,251 @@
+.admin-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.admin-inline-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 1rem;
+  align-items: start;
+  margin-bottom: 1.5rem;
+}
+
+.admin-inline-form .form-group {
+  margin-bottom: 0;
+}
+
+.bulk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.admin-inline-submit {
+  height: 42px;
+  justify-content: center;
+  margin-top: 1.95rem;
+}
+
+.btn-small.btn-success {
+  background: #10b981;
+}
+
+.btn-small.btn-success:hover {
+  background: #059669;
+}
+
+.btn-small.btn-danger {
+  background: #ef4444;
+}
+
+.btn-small.btn-danger:hover {
+  background: #dc2626;
+}
+
+.inline-link {
+  color: #0066cc;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.inline-link:hover {
+  text-decoration: underline;
+}
+
+.btn-small.btn-muted {
+  background: #6b7280;
+}
+
+.btn-small.btn-muted:hover {
+  background: #4b5563;
+}
+
+.modal-content-wide {
+  max-width: 760px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.form-group select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  background: #fff;
+}
+
+.form-group select:focus {
+  outline: none;
+  border-color: #0066cc;
+  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+}
+
+.doctor-notes-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 1rem;
+}
+
+.doctor-notes-sidebar .card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.doctor-notes-search {
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+}
+
+.doctor-notes-new-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.doctor-notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+.doctor-notes-item {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--border-color);
+  background: #f8fafc;
+  border-radius: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.doctor-notes-item.active {
+  border-color: #0ea5a5;
+  background: #ecfeff;
+}
+
+.doctor-notes-item span {
+  color: #64748b;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.doctor-notes-mode {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.doctor-notes-patient-search-wrap {
+  position: relative;
+}
+
+.doctor-notes-suggestions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin-top: 0.25rem;
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow-md);
+  z-index: 20;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.doctor-notes-suggestions button {
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
+}
+
+.doctor-notes-suggestions button:hover {
+  background: #f1f5f9;
+}
+
+.doctor-notes-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.75rem;
+}
+
+.doctor-notes-toolbar button,
+.doctor-notes-toolbar select {
+  border: 1px solid var(--border-color);
+  background: #ffffff;
+  border-radius: 0.4rem;
+  padding: 0.4rem 0.55rem;
+  cursor: pointer;
+}
+
+.doctor-notes-editor-surface {
+  min-height: 300px;
+  border: 1px solid var(--border-color);
+  border-radius: 0.6rem;
+  padding: 0.9rem;
+  background: #fff;
+  line-height: 1.5;
+  overflow-y: auto;
+}
+
+.doctor-notes-editor-surface:focus {
+  outline: none;
+  border-color: #0ea5a5;
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.12);
+}
+
+.doctor-notes-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 768px) {
+  .admin-inline-form {
+    grid-template-columns: 1fr;
+  }
+
+  .bulk-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-inline-submit {
+    width: 100%;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-actions {
+    flex-wrap: wrap;
+  }
+
+  .doctor-notes-layout {
+    grid-template-columns: 1fr;
+  }
+}

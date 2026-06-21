@@ -1,0 +1,35 @@
+QUICK START - Dr.Merceline Naserian Online Hospital
+
+1) Start Backend
+cd c:\xampp\htdocs\Hosi\server
+npm install
+npm start
+
+2) Start Frontend (new terminal)
+cd c:\xampp\htdocs\Hosi\client
+npm install
+npm start
+
+3) Open App
+http://localhost:3000
+
+4) Check Backend Health
+http://localhost:5000/api/health
+
+Frontend: React
+Backend: Node.js + Express
+Database: PostgreSQL (Neon)
+
+Demo Accounts
+Patient:
+  Email: patient@example.com
+  Password: password
+
+Admin:
+  Email: drnaserian@admin.com
+  Password: password
+
+Important
+- Local desktop mode uses:
+  REACT_APP_API_URL=http://localhost:5000
+- Vercel mode requires public backend URL (not localhost).

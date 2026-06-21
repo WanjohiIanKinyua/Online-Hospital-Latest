@@ -1,0 +1,25 @@
+node_modules/
+build/
+dist/
+
+# Local environment files can contain API keys, database URLs, and secrets.
+.env
+.env.*
+!.env.example
+
+# Local databases
+*.db
+hospital.db
+
+# Logs and editor files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.eslintcache
+.parcel-cache
