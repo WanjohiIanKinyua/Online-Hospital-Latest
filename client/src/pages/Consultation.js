@@ -49,7 +49,6 @@ const RTC_CONFIG = {
 
 const JITSI_DOMAIN = 'meet.jit.si';
 const USE_HOSTED_VIDEO_ROOM = true;
-let jitsiScriptPromise = null;
 
 const createClientId = () => {
   if (window.crypto?.randomUUID) return window.crypto.randomUUID();
@@ -92,9 +91,6 @@ function Consultation() {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const remoteAudioRef = useRef(null);
-  const hostedMeetingContainerRef = useRef(null);
-  const jitsiApiRef = useRef(null);
-  const hostedRedirectHandledRef = useRef(false);
   const micEnabledRef = useRef(true);
   const cameraEnabledRef = useRef(true);
   const meetingEndedRef = useRef(false);
@@ -115,6 +111,7 @@ function Consultation() {
   const remoteParticipant = participants[0] || null;
   const patientParticipant = participants.find((p) => p.role === 'patient') || null;
   const hostedRoomName = toHostedRoomName(appointmentId);
+  const hostedRoomUrl = `https://${JITSI_DOMAIN}/${hostedRoomName}`;
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -128,85 +125,6 @@ function Consultation() {
   useEffect(() => {
     participantsRef.current = participants;
   }, [participants]);
-
-  useEffect(() => {
-    if (!usingHostedFallback) return undefined;
-
-    let cancelled = false;
-
-    const loadJitsiScript = () => {
-      if (window.JitsiMeetExternalAPI) return Promise.resolve();
-      if (!jitsiScriptPromise) {
-        jitsiScriptPromise = new Promise((resolve, reject) => {
-          const existingScript = document.querySelector(`script[src="https://${JITSI_DOMAIN}/external_api.js"]`);
-          if (existingScript) {
-            existingScript.addEventListener('load', resolve, { once: true });
-            existingScript.addEventListener('error', reject, { once: true });
-            return;
-          }
-
-          const script = document.createElement('script');
-          script.src = `https://${JITSI_DOMAIN}/external_api.js`;
-          script.async = true;
-          script.onload = resolve;
-          script.onerror = reject;
-          document.body.appendChild(script);
-        });
-      }
-      return jitsiScriptPromise;
-    };
-
-    const redirectAfterHostedMeeting = () => {
-      if (hostedRedirectHandledRef.current) return;
-      hostedRedirectHandledRef.current = true;
-      cleanupMeeting();
-      navigate(isAdmin ? '/admin/doctor-notes' : '/dashboard');
-    };
-
-    const mountJitsi = async () => {
-      try {
-        await loadJitsiScript();
-        if (cancelled || !hostedMeetingContainerRef.current || !window.JitsiMeetExternalAPI) return;
-
-        hostedMeetingContainerRef.current.innerHTML = '';
-        hostedRedirectHandledRef.current = false;
-        jitsiApiRef.current = new window.JitsiMeetExternalAPI(JITSI_DOMAIN, {
-          roomName: hostedRoomName,
-          parentNode: hostedMeetingContainerRef.current,
-          width: '100%',
-          height: '100%',
-          userInfo: {
-            displayName: `${userName} (${isAdmin ? 'Admin' : 'Patient'})`
-          },
-          configOverwrite: {
-            prejoinPageEnabled: false
-          },
-          interfaceConfigOverwrite: {
-            SHOW_JITSI_WATERMARK: false
-          }
-        });
-
-        jitsiApiRef.current.addListener('videoConferenceLeft', redirectAfterHostedMeeting);
-        jitsiApiRef.current.addListener('readyToClose', redirectAfterHostedMeeting);
-      } catch (scriptError) {
-        if (!cancelled) {
-          setError('Could not load the video room. Please refresh and try again.');
-        }
-      }
-    };
-
-    mountJitsi();
-
-    return () => {
-      cancelled = true;
-      if (jitsiApiRef.current) {
-        jitsiApiRef.current.dispose();
-        jitsiApiRef.current = null;
-      }
-    };
-  },
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  [usingHostedFallback, hostedRoomName]);
 
   // Re-attach streams after loading completes (refs are now available)
   useEffect(() => {
@@ -718,6 +636,7 @@ function Consultation() {
       setBackupRoomAvailable(false);
       setUsingHostedFallback(true);
       setMeetingStarted(true);
+      launchHostedRoom();
       return;
     }
 
@@ -944,11 +863,6 @@ function Consultation() {
   };
 
   const cleanupMeeting = () => {
-    if (jitsiApiRef.current) {
-      jitsiApiRef.current.dispose();
-      jitsiApiRef.current = null;
-    }
-
     if (endRedirectTimerRef.current) {
       clearTimeout(endRedirectTimerRef.current);
       endRedirectTimerRef.current = null;
@@ -1004,6 +918,23 @@ function Consultation() {
     setMediaWarning('');
     setUsingHostedFallback(true);
     setMeetingStarted(true);
+    launchHostedRoom();
+  };
+
+  const launchHostedRoom = () => {
+    const opened = window.open(hostedRoomUrl, '_blank', 'noopener,noreferrer');
+    if (!opened) {
+      setError('The browser blocked the video room popup. Use the Open Jitsi room button below.');
+    }
+  };
+
+  const copyHostedRoomLink = async () => {
+    try {
+      await navigator.clipboard.writeText(hostedRoomUrl);
+      setConnectionMessage('Jitsi meeting link copied.');
+    } catch (copyError) {
+      setError('Could not copy the Jitsi meeting link. Open the room and copy it from the address bar.');
+    }
   };
 
   const emitParticipantState = (nextMicEnabled, nextCameraEnabled) => {
@@ -1346,8 +1277,26 @@ function Consultation() {
       )}
 
       {usingHostedFallback ? (
-        <div className="hosted-meeting-panel">
-          <div ref={hostedMeetingContainerRef} className="hosted-meeting-frame" />
+        <div className="hosted-launch-panel">
+          <div className="hosted-launch-content">
+            <h3>Jitsi consultation room</h3>
+            <p>
+              The full Jitsi room opens in a new tab so the meeting is not limited by public iframe embedding.
+              Keep this page open for your appointment details.
+            </p>
+            <div className="hosted-room-link">{hostedRoomUrl}</div>
+            <div className="hosted-launch-actions">
+              <a href={hostedRoomUrl} target="_blank" rel="noreferrer" className="control-btn">
+                <FiVideo /> Open Jitsi room
+              </a>
+              <button type="button" className="control-btn" onClick={copyHostedRoomLink}>
+                Copy meeting link
+              </button>
+              <Link to={isAdmin ? '/admin/doctor-notes' : '/dashboard'} className="control-btn danger">
+                Done
+              </Link>
+            </div>
+          </div>
         </div>
       ) : (
         <>

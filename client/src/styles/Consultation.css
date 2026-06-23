@@ -64,22 +64,51 @@
   gap: 1rem;
 }
 
-.hosted-meeting-panel {
+.hosted-launch-panel {
   width: 100%;
   min-height: calc(100vh - 180px);
   background: #020617;
   border: 1px solid rgba(148, 163, 184, 0.25);
   border-radius: 0.75rem;
-  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
 }
 
-.hosted-meeting-frame {
-  display: block;
-  width: 100%;
-  height: calc(100vh - 180px);
-  min-height: 620px;
-  border: 0;
-  background: #020617;
+.hosted-launch-content {
+  width: min(680px, 100%);
+  text-align: center;
+}
+
+.hosted-launch-content h3 {
+  margin: 0 0 0.75rem;
+  color: #f8fafc;
+  font-size: 1.35rem;
+}
+
+.hosted-launch-content p {
+  margin: 0 0 1rem;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
+.hosted-room-link {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 0.5rem;
+  background: rgba(15, 23, 42, 0.88);
+  color: #bfdbfe;
+  word-break: break-all;
+  font-size: 0.9rem;
+}
+
+.hosted-launch-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.7rem;
 }
 
 .video-card {
@@ -167,6 +196,7 @@
   border: 1px solid rgba(148, 163, 184, 0.32);
   background: rgba(30, 41, 59, 0.8);
   color: #f1f5f9;
+  text-decoration: none;
   padding: 0.65rem 0.9rem;
   border-radius: 0.6rem;
   font-weight: 600;
@@ -207,9 +237,7 @@
     grid-template-columns: 1fr;
   }
 
-  .hosted-meeting-panel,
-  .hosted-meeting-frame {
+  .hosted-launch-panel {
     min-height: calc(100vh - 150px);
-    height: calc(100vh - 150px);
   }
 }
