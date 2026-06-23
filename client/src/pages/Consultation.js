@@ -50,6 +50,8 @@ function Consultation() {
   const [mediaWarning, setMediaWarning] = useState('');
   const [remotePlaybackBlocked, setRemotePlaybackBlocked] = useState(false);
   const [remoteHasAudio, setRemoteHasAudio] = useState(false);
+  const [remoteHasVideo, setRemoteHasVideo] = useState(false);
+  const [connectionMessage, setConnectionMessage] = useState('');
 
   const meetingClientIdRef = useRef(null);
   const pollIntervalRef = useRef(null);
@@ -67,6 +69,8 @@ function Consultation() {
   const pendingIceCandidatesRef = useRef({});
   const remotePlaybackTriedRef = useRef(false);
   const remoteAttachTaskRef = useRef(null);
+  const connectionRetryTimersRef = useRef({});
+  const negotiationRetryCountsRef = useRef({});
 
   const token = localStorage.getItem('token');
   const userRole = localStorage.getItem('userRole');
@@ -181,9 +185,50 @@ function Consultation() {
   const renegotiateWithPeers = () => {
     Object.entries(peerConnectionsRef.current).forEach(([socketId, pc]) => {
       if (pc?.signalingState === 'stable') {
-        createAndSendOffer(socketId, pc);
+        createAndSendOffer(socketId, pc, true);
       }
     });
+  };
+
+  const hasRemoteTracks = () => (
+    Boolean(remoteStreamRef.current?.getTracks?.().some((track) => track.readyState === 'live'))
+  );
+
+  const clearConnectionRetry = (socketId) => {
+    if (connectionRetryTimersRef.current[socketId]) {
+      clearTimeout(connectionRetryTimersRef.current[socketId]);
+      delete connectionRetryTimersRef.current[socketId];
+    }
+  };
+
+  const scheduleConnectionRetry = (socketId, pc, delay = 5000) => {
+    if (!shouldCreateOfferTo(socketId) || meetingEndedRef.current) return;
+    clearConnectionRetry(socketId);
+
+    connectionRetryTimersRef.current[socketId] = setTimeout(() => {
+      delete connectionRetryTimersRef.current[socketId];
+      const currentPc = peerConnectionsRef.current[socketId] || pc;
+      if (!currentPc || currentPc.connectionState === 'connected' || hasRemoteTracks()) return;
+
+      const attempts = (negotiationRetryCountsRef.current[socketId] || 0) + 1;
+      negotiationRetryCountsRef.current[socketId] = attempts;
+      setConnectionMessage('Connecting media. Retrying secure video/audio link...');
+
+      if (currentPc.signalingState === 'stable') {
+        try {
+          currentPc.restartIce?.();
+        } catch (restartError) {
+          // Some browsers do not expose restartIce.
+        }
+        createAndSendOffer(socketId, currentPc, true);
+      }
+
+      if (attempts >= 3 && !hasRemoteTracks()) {
+        setConnectionMessage('Video/audio cannot connect on this network. Add TURN relay credentials in Vercel REACT_APP_ICE_SERVERS, then redeploy.');
+      } else {
+        scheduleConnectionRetry(socketId, currentPc, 6000);
+      }
+    }, delay);
   };
 
   // ---- Media ----
@@ -633,6 +678,8 @@ function Consultation() {
     pc.ontrack = (event) => {
       console.log('ontrack fired from:', targetSocketId, 'kind:', event.track?.kind);
       if (!event.track) return;
+      setConnectionMessage('');
+      clearConnectionRetry(targetSocketId);
 
       // Get or create the remote stream
       if (!remoteStreamRef.current) {
@@ -651,6 +698,9 @@ function Consultation() {
 
       if (event.track.kind === 'audio') {
         setRemoteHasAudio(true);
+      }
+      if (event.track.kind === 'video') {
+        setRemoteHasVideo(true);
       }
 
       // Always attempt to attach the combined stream
@@ -677,35 +727,53 @@ function Consultation() {
 
     pc.oniceconnectionstatechange = () => {
       console.log(`ICE state for ${targetSocketId}:`, pc.iceConnectionState);
-      if (pc.iceConnectionState === 'failed') {
-        // Attempt ICE restart
+      if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+        setConnectionMessage('');
+        clearConnectionRetry(targetSocketId);
+      }
+      if (pc.iceConnectionState === 'checking') {
+        setConnectionMessage('Connecting media...');
+      }
+      if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+        setConnectionMessage('Media connection dropped. Retrying...');
         if (pc.signalingState === 'stable') {
-          createAndSendOffer(targetSocketId, pc);
+          try {
+            pc.restartIce?.();
+          } catch (restartError) {
+            // Some browsers do not expose restartIce.
+          }
+          createAndSendOffer(targetSocketId, pc, true);
         }
+        scheduleConnectionRetry(targetSocketId, pc, 2000);
       }
     };
 
     pc.onconnectionstatechange = () => {
       console.log(`Connection state for ${targetSocketId}:`, pc.connectionState);
       if (pc.connectionState === 'failed') {
+        setConnectionMessage('Video/audio connection failed. Retrying...');
         if (pc.signalingState === 'stable') {
-          createAndSendOffer(targetSocketId, pc);
+          createAndSendOffer(targetSocketId, pc, true);
         }
+        scheduleConnectionRetry(targetSocketId, pc, 2000);
       }
       if (pc.connectionState === 'connected') {
         console.log(`Successfully connected to ${targetSocketId}`);
         setError('');
+        setConnectionMessage('');
+        clearConnectionRetry(targetSocketId);
       }
     };
 
     if (shouldCreateOffer) {
       createAndSendOffer(targetSocketId, pc);
+      scheduleConnectionRetry(targetSocketId, pc);
     }
 
     return pc;
   };
 
-  const createAndSendOffer = (targetSocketId, pc) => {
+  const createAndSendOffer = (targetSocketId, pc, iceRestart = false) => {
     if (!pc || meetingEndedRef.current) return;
     if (pc.signalingState !== 'stable') {
       console.log(`Cannot create offer for ${targetSocketId}, state: ${pc.signalingState}`);
@@ -713,7 +781,7 @@ function Consultation() {
     }
 
     console.log(`Creating offer for ${targetSocketId}, track count:`, localStreamRef.current?.getTracks().length || 0);
-    pc.createOffer({ iceRestart: false })
+    pc.createOffer({ iceRestart })
       .then((offer) => pc.setLocalDescription(offer))
       .then(() => {
         console.log(`Sending offer to ${targetSocketId}`);
@@ -727,6 +795,8 @@ function Consultation() {
   };
 
   const closePeerConnection = (socketId) => {
+    clearConnectionRetry(socketId);
+    delete negotiationRetryCountsRef.current[socketId];
     const pc = peerConnectionsRef.current[socketId];
     if (pc) {
       pc.close();
@@ -755,6 +825,10 @@ function Consultation() {
       clearTimeout(remoteAttachTaskRef.current);
       remoteAttachTaskRef.current = null;
     }
+
+    Object.keys(connectionRetryTimersRef.current).forEach((socketId) => {
+      clearConnectionRetry(socketId);
+    });
 
     const clientId = meetingClientIdRef.current;
     if (clientId && !meetingEndedRef.current) {
@@ -1108,6 +1182,9 @@ function Consultation() {
       {error && appointment && !meetingEnded && (
         <div className="room-alert room-alert-danger">{error}</div>
       )}
+      {connectionMessage && meetingStarted && (
+        <div className="room-alert room-alert-danger">{connectionMessage}</div>
+      )}
 
       <div className="video-grid">
         <div className="video-card local">
@@ -1140,6 +1217,11 @@ function Consultation() {
                 <FiVideoOff /> Camera Off
               </span>
             )}
+            {remoteParticipant && remoteParticipant.cameraEnabled !== false && !remoteHasVideo && (
+              <span className="video-status-pill">
+                <FiVideoOff /> Video connecting
+              </span>
+            )}
             {!remoteHasAudio && remoteParticipant && remoteParticipant.micEnabled !== false && (
               <span className="video-status-pill">
                 <FiVolumeX /> Audio connecting
@@ -1154,6 +1236,9 @@ function Consultation() {
             </button>
           )}
           {meetingStarted && participants.length === 0 && <div className="waiting-overlay">Waiting for other participant...</div>}
+          {meetingStarted && participants.length > 0 && !remoteHasVideo && (
+            <div className="waiting-overlay">Connecting remote video...</div>
+          )}
         </div>
       </div>
 
