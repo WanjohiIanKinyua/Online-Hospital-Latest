@@ -22,9 +22,12 @@ DATABASE_URL=your_neon_connection_string
 JWT_SECRET=your_long_random_secret
 ALLOWED_ORIGINS=https://your-vercel-domain.vercel.app
 REACT_APP_API_URL=
+REACT_APP_ICE_SERVERS=[{"urls":"stun:stun.l.google.com:19302"},{"urls":["turn:your-turn-host:3478","turn:your-turn-host:443","turns:your-turn-host:443?transport=tcp"],"username":"your-turn-username","credential":"your-turn-password"}]
 ```
 
 For a single Vercel project, `REACT_APP_API_URL` should be empty or removed. The frontend will call `/api/...` on the same domain.
+
+`REACT_APP_ICE_SERVERS` must be valid JSON on one line. Replace the TURN host, username, and password with private credentials from your TURN provider, then redeploy the frontend so React bakes the value into the build.
 
 ## Smoke Tests
 

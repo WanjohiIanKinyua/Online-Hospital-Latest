@@ -47,17 +47,10 @@ const RTC_CONFIG = {
   iceCandidatePoolSize: 4
 };
 
-const USE_HOSTED_CONSULTATION_ROOM = true;
-const JITSI_DOMAIN = 'meet.jit.si';
-
 const createClientId = () => {
   if (window.crypto?.randomUUID) return window.crypto.randomUUID();
   return `client-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
-
-const toHostedRoomName = (appointmentId) => (
-  `DrMerceline-${String(appointmentId || 'consultation')}`.replace(/[^a-zA-Z0-9-_]/g, '-')
-);
 
 function Consultation() {
   const { appointmentId } = useParams();
@@ -108,8 +101,6 @@ function Consultation() {
   const endRedirectTimerRef = useRef(null);
   const remoteParticipant = participants[0] || null;
   const patientParticipant = participants.find((p) => p.role === 'patient') || null;
-  const hostedRoomName = toHostedRoomName(appointmentId);
-  const hostedRoomUrl = `https://${JITSI_DOMAIN}/${hostedRoomName}`;
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -618,14 +609,6 @@ function Consultation() {
 
   const startMeeting = async () => {
     if (startingMeeting || meetingStarted) return;
-
-    if (USE_HOSTED_CONSULTATION_ROOM) {
-      setError('');
-      setMediaWarning('');
-      setConnectionMessage('');
-      setMeetingStarted(true);
-      return;
-    }
 
     try {
       setStartingMeeting(true);
@@ -1223,18 +1206,6 @@ function Consultation() {
         <div className="room-alert room-alert-danger">{connectionMessage}</div>
       )}
 
-      {USE_HOSTED_CONSULTATION_ROOM && meetingStarted ? (
-        <div className="hosted-meeting-panel">
-          <iframe
-            title="Consultation video room"
-            src={hostedRoomUrl}
-            allow="camera; microphone; fullscreen; display-capture; autoplay; clipboard-write"
-            allowFullScreen
-            referrerPolicy="no-referrer"
-            className="hosted-meeting-frame"
-          />
-        </div>
-      ) : (
       <>
         <div className="video-grid">
         <div className="video-card local">
@@ -1326,7 +1297,6 @@ function Consultation() {
         )}
       </div>
       </>
-      )}
     </div>
   );
 }
