@@ -227,7 +227,7 @@ function Consultation() {
   };
 
   const scheduleConnectionRetry = (socketId, pc, delay = 5000) => {
-    if (!shouldCreateOfferTo(socketId) || meetingEndedRef.current) return;
+    if (meetingEndedRef.current) return;
     clearConnectionRetry(socketId);
 
     connectionRetryTimersRef.current[socketId] = setTimeout(() => {
@@ -752,6 +752,11 @@ function Consultation() {
       }).catch(() => {});
     };
 
+    pc.onnegotiationneeded = () => {
+      if (meetingEndedRef.current || pc.signalingState !== 'stable') return;
+      createAndSendOffer(targetSocketId, pc);
+    };
+
     pc.oniceconnectionstatechange = () => {
       console.log(`ICE state for ${targetSocketId}:`, pc.iceConnectionState);
       if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
@@ -795,6 +800,8 @@ function Consultation() {
     if (shouldCreateOffer) {
       createAndSendOffer(targetSocketId, pc);
       scheduleConnectionRetry(targetSocketId, pc);
+    } else {
+      scheduleConnectionRetry(targetSocketId, pc, 2500);
     }
 
     return pc;
