@@ -459,7 +459,7 @@ function Consultation() {
 
       if (signal.type === 'webrtc-offer' && fromClientId && payload.offer) {
         console.log('Received offer from:', fromClientId);
-        const pc = getOrCreatePC(fromClientId);
+        const pc = getOrCreatePC(fromClientId, false);
         const offerCollision = pc.signalingState !== 'stable';
         const shouldIgnoreOffer = offerCollision && shouldCreateOfferTo(fromClientId);
 
@@ -636,9 +636,9 @@ function Consultation() {
 
   // ---- Peer Connection Management ----
 
-  const getOrCreatePC = (socketId) => {
+  const getOrCreatePC = (socketId, shouldCreateOffer = shouldCreateOfferTo(socketId)) => {
     if (peerConnectionsRef.current[socketId]) return peerConnectionsRef.current[socketId];
-    return createPeerConnection(socketId, shouldCreateOfferTo(socketId));
+    return createPeerConnection(socketId, shouldCreateOffer);
   };
 
   const createPeerConnection = (targetSocketId, shouldCreateOffer = shouldCreateOfferTo(targetSocketId)) => {
