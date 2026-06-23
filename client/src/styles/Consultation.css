@@ -64,51 +64,33 @@
   gap: 1rem;
 }
 
-.hosted-launch-panel {
+.hosted-meeting-panel {
+  position: relative;
   width: 100%;
   min-height: calc(100vh - 180px);
   background: #020617;
   border: 1px solid rgba(148, 163, 184, 0.25);
   border-radius: 0.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
+  overflow: hidden;
 }
 
-.hosted-launch-content {
-  width: min(680px, 100%);
-  text-align: center;
+.hosted-meeting-frame {
+  display: block;
+  width: 100%;
+  height: calc(100vh - 180px);
+  min-height: 620px;
+  border: 0;
+  background: #020617;
 }
 
-.hosted-launch-content h3 {
-  margin: 0 0 0.75rem;
-  color: #f8fafc;
-  font-size: 1.35rem;
-}
-
-.hosted-launch-content p {
-  margin: 0 0 1rem;
-  color: #cbd5e1;
-  line-height: 1.5;
-}
-
-.hosted-room-link {
-  margin: 1rem 0;
-  padding: 0.75rem;
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  border-radius: 0.5rem;
-  background: rgba(15, 23, 42, 0.88);
-  color: #bfdbfe;
-  word-break: break-all;
-  font-size: 0.9rem;
-}
-
-.hosted-launch-actions {
+.hosted-meeting-actions {
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 5;
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.7rem;
+  gap: 0.5rem;
 }
 
 .video-card {
@@ -237,7 +219,9 @@
     grid-template-columns: 1fr;
   }
 
-  .hosted-launch-panel {
+  .hosted-meeting-panel,
+  .hosted-meeting-frame {
     min-height: calc(100vh - 150px);
+    height: calc(100vh - 150px);
   }
 }
