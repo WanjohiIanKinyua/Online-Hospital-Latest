@@ -18,7 +18,8 @@
 
 .dashboard-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: var(--background);
 }
 
@@ -290,6 +291,7 @@
   flex: 1;
   margin-left: 280px;
   padding: 2rem;
+  height: 100vh;
   overflow-y: auto;
 }
 
@@ -319,6 +321,7 @@
     margin-left: 0;
     padding: 1.5rem;
     padding-top: 5rem;
+    height: 100vh;
   }
 }
 

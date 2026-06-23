@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -70,15 +70,13 @@ export function DashboardLayout({ children, role = 'patient' }) {
   const links = role === 'admin' ? adminLinks : patientLinks;
   const sidebarScrollKey = `sidebarScroll:${role}`;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const nav = sidebarNavRef.current;
     if (!nav) return undefined;
 
     const savedScrollTop = Number(sessionStorage.getItem(sidebarScrollKey) || 0);
     if (savedScrollTop > 0) {
-      requestAnimationFrame(() => {
-        nav.scrollTop = savedScrollTop;
-      });
+      nav.scrollTop = savedScrollTop;
     }
 
     const saveScrollPosition = () => {
