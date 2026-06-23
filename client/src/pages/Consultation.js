@@ -49,6 +49,7 @@ const RTC_CONFIG = {
 
 const JITSI_DOMAIN = 'meet.jit.si';
 const USE_HOSTED_VIDEO_ROOM = true;
+let jitsiScriptPromise = null;
 
 const createClientId = () => {
   if (window.crypto?.randomUUID) return window.crypto.randomUUID();
@@ -91,6 +92,9 @@ function Consultation() {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const remoteAudioRef = useRef(null);
+  const hostedMeetingContainerRef = useRef(null);
+  const jitsiApiRef = useRef(null);
+  const hostedRedirectHandledRef = useRef(false);
   const micEnabledRef = useRef(true);
   const cameraEnabledRef = useRef(true);
   const meetingEndedRef = useRef(false);
@@ -110,7 +114,7 @@ function Consultation() {
   const endRedirectTimerRef = useRef(null);
   const remoteParticipant = participants[0] || null;
   const patientParticipant = participants.find((p) => p.role === 'patient') || null;
-  const hostedRoomUrl = `https://${JITSI_DOMAIN}/${toHostedRoomName(appointmentId)}`;
+  const hostedRoomName = toHostedRoomName(appointmentId);
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -124,6 +128,85 @@ function Consultation() {
   useEffect(() => {
     participantsRef.current = participants;
   }, [participants]);
+
+  useEffect(() => {
+    if (!usingHostedFallback) return undefined;
+
+    let cancelled = false;
+
+    const loadJitsiScript = () => {
+      if (window.JitsiMeetExternalAPI) return Promise.resolve();
+      if (!jitsiScriptPromise) {
+        jitsiScriptPromise = new Promise((resolve, reject) => {
+          const existingScript = document.querySelector(`script[src="https://${JITSI_DOMAIN}/external_api.js"]`);
+          if (existingScript) {
+            existingScript.addEventListener('load', resolve, { once: true });
+            existingScript.addEventListener('error', reject, { once: true });
+            return;
+          }
+
+          const script = document.createElement('script');
+          script.src = `https://${JITSI_DOMAIN}/external_api.js`;
+          script.async = true;
+          script.onload = resolve;
+          script.onerror = reject;
+          document.body.appendChild(script);
+        });
+      }
+      return jitsiScriptPromise;
+    };
+
+    const redirectAfterHostedMeeting = () => {
+      if (hostedRedirectHandledRef.current) return;
+      hostedRedirectHandledRef.current = true;
+      cleanupMeeting();
+      navigate(isAdmin ? '/admin/doctor-notes' : '/dashboard');
+    };
+
+    const mountJitsi = async () => {
+      try {
+        await loadJitsiScript();
+        if (cancelled || !hostedMeetingContainerRef.current || !window.JitsiMeetExternalAPI) return;
+
+        hostedMeetingContainerRef.current.innerHTML = '';
+        hostedRedirectHandledRef.current = false;
+        jitsiApiRef.current = new window.JitsiMeetExternalAPI(JITSI_DOMAIN, {
+          roomName: hostedRoomName,
+          parentNode: hostedMeetingContainerRef.current,
+          width: '100%',
+          height: '100%',
+          userInfo: {
+            displayName: `${userName} (${isAdmin ? 'Admin' : 'Patient'})`
+          },
+          configOverwrite: {
+            prejoinPageEnabled: false
+          },
+          interfaceConfigOverwrite: {
+            SHOW_JITSI_WATERMARK: false
+          }
+        });
+
+        jitsiApiRef.current.addListener('videoConferenceLeft', redirectAfterHostedMeeting);
+        jitsiApiRef.current.addListener('readyToClose', redirectAfterHostedMeeting);
+      } catch (scriptError) {
+        if (!cancelled) {
+          setError('Could not load the video room. Please refresh and try again.');
+        }
+      }
+    };
+
+    mountJitsi();
+
+    return () => {
+      cancelled = true;
+      if (jitsiApiRef.current) {
+        jitsiApiRef.current.dispose();
+        jitsiApiRef.current = null;
+      }
+    };
+  },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [usingHostedFallback, hostedRoomName]);
 
   // Re-attach streams after loading completes (refs are now available)
   useEffect(() => {
@@ -861,6 +944,11 @@ function Consultation() {
   };
 
   const cleanupMeeting = () => {
+    if (jitsiApiRef.current) {
+      jitsiApiRef.current.dispose();
+      jitsiApiRef.current = null;
+    }
+
     if (endRedirectTimerRef.current) {
       clearTimeout(endRedirectTimerRef.current);
       endRedirectTimerRef.current = null;
@@ -1259,14 +1347,7 @@ function Consultation() {
 
       {usingHostedFallback ? (
         <div className="hosted-meeting-panel">
-          <iframe
-            title="Consultation video room"
-            src={hostedRoomUrl}
-            allow="camera; microphone; fullscreen; display-capture; autoplay; clipboard-write"
-            allowFullScreen
-            referrerPolicy="no-referrer"
-            className="hosted-meeting-frame"
-          />
+          <div ref={hostedMeetingContainerRef} className="hosted-meeting-frame" />
         </div>
       ) : (
         <>
