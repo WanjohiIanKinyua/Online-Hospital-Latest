@@ -48,6 +48,7 @@ const RTC_CONFIG = {
 };
 
 const JITSI_DOMAIN = 'meet.jit.si';
+const USE_HOSTED_VIDEO_ROOM = true;
 
 const createClientId = () => {
   if (window.crypto?.randomUUID) return window.crypto.randomUUID();
@@ -626,6 +627,16 @@ function Consultation() {
 
   const startMeeting = async () => {
     if (startingMeeting || meetingStarted) return;
+
+    if (USE_HOSTED_VIDEO_ROOM) {
+      setError('');
+      setMediaWarning('');
+      setConnectionMessage('');
+      setBackupRoomAvailable(false);
+      setUsingHostedFallback(true);
+      setMeetingStarted(true);
+      return;
+    }
 
     try {
       setStartingMeeting(true);
@@ -1220,7 +1231,7 @@ function Consultation() {
       {!meetingStarted && (
         <div className="room-alert">
           <button type="button" className="inline-alert-action" onClick={startMeeting} disabled={startingMeeting}>
-            {startingMeeting ? 'Joining...' : 'Join with camera and mic'}
+            {startingMeeting ? 'Joining...' : 'Join video consultation'}
           </button>
         </div>
       )}
