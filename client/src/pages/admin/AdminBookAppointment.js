@@ -9,6 +9,7 @@ import { API_BASE_URL } from '../../config/api';
 function AdminBookAppointment() {
   const [patients, setPatients] = useState([]);
   const [patientSearch, setPatientSearch] = useState('');
+  const [patientPickerOpen, setPatientPickerOpen] = useState(false);
   const [doctors, setDoctors] = useState([]);
   const [bookableSlots, setBookableSlots] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -80,6 +81,12 @@ function AdminBookAppointment() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const selectPatient = (patient) => {
+    setFormData((prev) => ({ ...prev, patientId: patient.id }));
+    setPatientSearch('');
+    setPatientPickerOpen(false);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -100,6 +107,8 @@ function AdminBookAppointment() {
         appointmentTime: '',
         doctorName: doctors.length > 0 ? doctors[0].fullName : 'Dr. Merceline'
       });
+      setPatientSearch('');
+      setPatientPickerOpen(false);
       setBookableSlots([]);
     } catch (error) {
       alert(error.response?.data?.error || 'Failed to book appointment for patient');
@@ -110,8 +119,9 @@ function AdminBookAppointment() {
   const filteredPatients = patients.filter((patient) => {
     const query = patientSearch.trim().toLowerCase();
     if (!query) return true;
-    return String(patient.fullName || '').toLowerCase().includes(query);
+    return `${patient.fullName || ''} ${patient.email || ''}`.toLowerCase().includes(query);
   });
+  const selectedPatient = patients.find((patient) => patient.id === formData.patientId);
 
   if (loading) {
     return (
@@ -136,32 +146,52 @@ function AdminBookAppointment() {
             <form onSubmit={handleSubmit}>
               <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor="patientSearch">Search Patient By Name</label>
-                  <input
-                    type="text"
-                    id="patientSearch"
-                    name="patientSearch"
-                    value={patientSearch}
-                    onChange={(e) => setPatientSearch(e.target.value)}
-                    placeholder="Type patient name..."
-                  />
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
                   <label htmlFor="patientId">Patient</label>
-                  <select id="patientId" name="patientId" value={formData.patientId} onChange={handleChange}>
-                    <option value="">Select patient</option>
-                    {filteredPatients.map((patient) => (
-                      <option key={patient.id} value={patient.id}>
-                        {patient.fullName} ({patient.email})
-                      </option>
-                    ))}
-                  </select>
-                  {patientSearch.trim() && filteredPatients.length === 0 && (
-                    <p className="text-muted">No patients found for "{patientSearch}".</p>
-                  )}
+                  <div className="patient-combobox">
+                    <button
+                      type="button"
+                      id="patientId"
+                      className={`patient-combobox-trigger ${patientPickerOpen ? 'open' : ''}`}
+                      onClick={() => setPatientPickerOpen((open) => !open)}
+                    >
+                      <span>
+                        {selectedPatient
+                          ? `${selectedPatient.fullName} (${selectedPatient.email})`
+                          : 'Select patient'}
+                      </span>
+                      <span className="patient-combobox-caret">v</span>
+                    </button>
+
+                    {patientPickerOpen && (
+                      <div className="patient-combobox-menu">
+                        <input
+                          type="text"
+                          value={patientSearch}
+                          onChange={(e) => setPatientSearch(e.target.value)}
+                          placeholder="Search patient name or email..."
+                          className="patient-combobox-search"
+                          autoFocus
+                        />
+                        <div className="patient-combobox-options">
+                          {filteredPatients.length > 0 ? (
+                            filteredPatients.map((patient) => (
+                              <button
+                                type="button"
+                                key={patient.id}
+                                className={`patient-combobox-option ${formData.patientId === patient.id ? 'selected' : ''}`}
+                                onClick={() => selectPatient(patient)}
+                              >
+                                <span>{patient.fullName}</span>
+                                <small>{patient.email}</small>
+                              </button>
+                            ))
+                          ) : (
+                            <div className="patient-combobox-empty">No patients found.</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="form-group">

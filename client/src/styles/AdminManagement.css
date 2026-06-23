@@ -89,6 +89,114 @@
   box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
 }
 
+.patient-combobox {
+  position: relative;
+}
+
+.patient-combobox-trigger {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  background: #ffffff;
+  color: #1a1a1a;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.patient-combobox-trigger.open,
+.patient-combobox-trigger:focus {
+  outline: none;
+  border-color: #0066cc;
+  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+}
+
+.patient-combobox-trigger span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.patient-combobox-caret {
+  color: #475569;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+}
+
+.patient-combobox-menu {
+  position: absolute;
+  z-index: 30;
+  left: 0;
+  right: 0;
+  top: calc(100% + 0.35rem);
+  border: 1px solid var(--border-color);
+  border-radius: 0.6rem;
+  background: #ffffff;
+  box-shadow: var(--shadow-lg);
+  padding: 0.55rem;
+}
+
+.patient-combobox-search {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.45rem;
+  font: inherit;
+  margin-bottom: 0.5rem;
+}
+
+.patient-combobox-search:focus {
+  outline: none;
+  border-color: #0066cc;
+  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+}
+
+.patient-combobox-options {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.patient-combobox-option {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  border-radius: 0.45rem;
+  padding: 0.65rem 0.7rem;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.patient-combobox-option:hover,
+.patient-combobox-option.selected {
+  background: #f0f7ff;
+}
+
+.patient-combobox-option span {
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+.patient-combobox-option small {
+  color: #64748b;
+}
+
+.patient-combobox-empty {
+  padding: 0.75rem;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
 .doctor-notes-layout {
   display: grid;
   grid-template-columns: 320px 1fr;
