@@ -221,6 +221,11 @@ function Consultation() {
     }
   };
 
+  const queuePendingIceCandidate = (socketId, candidate) => {
+    pendingIceCandidatesRef.current[socketId] = pendingIceCandidatesRef.current[socketId] || [];
+    pendingIceCandidatesRef.current[socketId].push(candidate);
+  };
+
   const scheduleConnectionRetry = (socketId, pc, delay = 5000) => {
     if (!shouldCreateOfferTo(socketId) || meetingEndedRef.current) return;
     clearConnectionRetry(socketId);
@@ -530,17 +535,19 @@ function Consultation() {
 
       if (signal.type === 'webrtc-ice-candidate' && fromClientId && payload.candidate) {
         const pc = peerConnectionsRef.current[fromClientId];
-        if (pc) {
-          try {
-            if (pc.remoteDescription) {
-              await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
-            } else {
-              pendingIceCandidatesRef.current[fromClientId] = pendingIceCandidatesRef.current[fromClientId] || [];
-              pendingIceCandidatesRef.current[fromClientId].push(payload.candidate);
-            }
-          } catch (iceError) {
-            console.error('ICE candidate error:', iceError);
+        if (!pc) {
+          queuePendingIceCandidate(fromClientId, payload.candidate);
+          continue;
+        }
+
+        try {
+          if (pc.remoteDescription) {
+            await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
+          } else {
+            queuePendingIceCandidate(fromClientId, payload.candidate);
           }
+        } catch (iceError) {
+          console.error('ICE candidate error:', iceError);
         }
       }
 
