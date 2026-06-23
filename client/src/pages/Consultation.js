@@ -1260,7 +1260,7 @@ function Consultation() {
       {usingHostedFallback ? (
         <div className="hosted-meeting-panel">
           <iframe
-            title="Backup consultation video room"
+            title="Consultation video room"
             src={hostedRoomUrl}
             allow="camera; microphone; fullscreen; display-capture; autoplay; clipboard-write"
             allowFullScreen
