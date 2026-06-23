@@ -5,31 +5,41 @@ import { FiArrowLeft, FiMic, FiMicOff, FiVideo, FiVideoOff, FiPhoneOff, FiVolume
 import '../styles/Consultation.css';
 import { API_BASE_URL } from '../config/api';
 
+const FALLBACK_ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  {
+    urls: [
+      'turn:openrelay.metered.ca:80',
+      'turn:openrelay.metered.ca:443',
+      'turn:openrelay.metered.ca:443?transport=tcp',
+      'turns:openrelay.metered.ca:443?transport=tcp'
+    ],
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
+  }
+];
+
+const iceServerHasTurn = (server) => {
+  const urls = Array.isArray(server?.urls) ? server.urls : [server?.urls];
+  return urls.some((url) => typeof url === 'string' && url.toLowerCase().startsWith('turn'));
+};
+
 const parseIceServers = () => {
   try {
     const configured = process.env.REACT_APP_ICE_SERVERS;
     if (configured) {
       const parsed = JSON.parse(configured);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const hasTurn = parsed.some(iceServerHasTurn);
+        return hasTurn ? parsed : [...parsed, ...FALLBACK_ICE_SERVERS.filter(iceServerHasTurn)];
+      }
     }
   } catch (error) {
     // Fall back to public relay servers below.
   }
 
-  return [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    {
-      urls: [
-        'turn:openrelay.metered.ca:80',
-        'turn:openrelay.metered.ca:443',
-        'turn:openrelay.metered.ca:443?transport=tcp',
-        'turns:openrelay.metered.ca:443?transport=tcp'
-      ],
-      username: 'openrelayproject',
-      credential: 'openrelayproject'
-    }
-  ];
+  return FALLBACK_ICE_SERVERS;
 };
 
 const RTC_CONFIG = {
@@ -234,7 +244,7 @@ function Consultation() {
       }
 
       if (attempts >= 3 && !hasRemoteTracks()) {
-        setConnectionMessage('Video/audio cannot connect on this network. Add TURN relay credentials in Vercel REACT_APP_ICE_SERVERS, then redeploy.');
+        setConnectionMessage('Video/audio still cannot connect. Check Vercel REACT_APP_ICE_SERVERS or use private TURN relay credentials, then redeploy.');
       } else {
         scheduleConnectionRetry(socketId, currentPc, 6000);
       }
