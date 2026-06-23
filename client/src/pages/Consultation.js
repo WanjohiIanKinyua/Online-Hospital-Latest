@@ -38,10 +38,12 @@ function Consultation() {
 
   const [appointment, setAppointment] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [meetingStarted, setMeetingStarted] = useState(false);
+  const [startingMeeting, setStartingMeeting] = useState(false);
   const [error, setError] = useState('');
   const [participants, setParticipants] = useState([]);
-  const [micEnabled, setMicEnabled] = useState(true);
-  const [cameraEnabled, setCameraEnabled] = useState(true);
+  const [micEnabled, setMicEnabled] = useState(false);
+  const [cameraEnabled, setCameraEnabled] = useState(false);
   const [meetingEnded, setMeetingEnded] = useState(false);
   const [mutedByAdmin, setMutedByAdmin] = useState(false);
   const [cameraControlledByAdmin, setCameraControlledByAdmin] = useState(false);
@@ -115,7 +117,6 @@ function Consultation() {
         if (!mounted) return;
 
         setAppointment(response.data);
-        await startMeeting();
       } catch (err) {
         if (!mounted) return;
         setError(err.response?.data?.error || 'Failed to load appointment details');
@@ -241,6 +242,13 @@ function Consultation() {
     });
   };
 
+  const addTracksFromStream = (stream) => {
+    stream.getTracks().forEach((track) => {
+      track.enabled = true;
+      addOrReplaceLocalTrack(track);
+    });
+  };
+
   const acquireAudioTrack = async () => {
     const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
     const track = audioStream.getAudioTracks()[0];
@@ -267,19 +275,30 @@ function Consultation() {
     ensureLocalStream();
 
     try {
-      const track = await acquireAudioTrack();
-      console.log('Audio track acquired, enabled:', track.enabled);
-    } catch (audioError) {
-      console.error('Audio acquisition error:', audioError);
-      failures.push('microphone');
-    }
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+      });
+      addTracksFromStream(mediaStream);
+      console.log('Camera and microphone acquired together.');
+    } catch (combinedError) {
+      console.error('Combined media acquisition error:', combinedError);
 
-    try {
-      const track = await acquireVideoTrack();
-      console.log('Video track acquired, enabled:', track.enabled);
-    } catch (videoError) {
-      console.error('Video acquisition error:', videoError);
-      failures.push('camera');
+      try {
+        const track = await acquireAudioTrack();
+        console.log('Audio track acquired, enabled:', track.enabled);
+      } catch (audioError) {
+        console.error('Audio acquisition error:', audioError);
+        failures.push('microphone');
+      }
+
+      try {
+        const track = await acquireVideoTrack();
+        console.log('Video track acquired, enabled:', track.enabled);
+      } catch (videoError) {
+        console.error('Video acquisition error:', videoError);
+        failures.push('camera');
+      }
     }
 
     await attachLocalStream(localStreamRef.current).catch(() => {});
@@ -524,7 +543,11 @@ function Consultation() {
   };
 
   const startMeeting = async () => {
+    if (startingMeeting || meetingStarted) return;
+
     try {
+      setStartingMeeting(true);
+      setError('');
       console.log('Starting meeting...');
       const mediaStatus = await requestInitialMedia();
       console.log('Media acquired. Mic:', mediaStatus.micEnabled, 'Camera:', mediaStatus.cameraEnabled);
@@ -554,12 +577,15 @@ function Consultation() {
       });
 
       startMeetingPolling();
+      setMeetingStarted(true);
     } catch (mediaError) {
       console.error('Meeting start error:', mediaError);
       setError(
         mediaError.response?.data?.error ||
         'Could not enter the consultation room. Please reload and try again.'
       );
+    } finally {
+      setStartingMeeting(false);
     }
   };
 
@@ -1064,6 +1090,13 @@ function Consultation() {
       {cameraControlledByAdmin && (
         <div className="room-alert">Your camera was changed by admin.</div>
       )}
+      {!meetingStarted && (
+        <div className="room-alert">
+          <button type="button" className="inline-alert-action" onClick={startMeeting} disabled={startingMeeting}>
+            {startingMeeting ? 'Joining...' : 'Join with camera and mic'}
+          </button>
+        </div>
+      )}
       {mediaWarning && (
         <div className="room-alert room-alert-danger">
           {mediaWarning}
@@ -1120,21 +1153,21 @@ function Consultation() {
               Click to enable sound and video
             </button>
           )}
-          {participants.length === 0 && <div className="waiting-overlay">Waiting for other participant...</div>}
+          {meetingStarted && participants.length === 0 && <div className="waiting-overlay">Waiting for other participant...</div>}
         </div>
       </div>
 
       <div className="meeting-controls">
-        <button type="button" className={`control-btn ${micEnabled ? '' : 'off'}`} onClick={() => toggleMic()}>
+        <button type="button" className={`control-btn ${micEnabled ? '' : 'off'}`} onClick={() => toggleMic()} disabled={!meetingStarted}>
           {micEnabled ? <FiMic /> : <FiMicOff />} {micEnabled ? 'Mute' : 'Unmute'}
         </button>
 
-        <button type="button" className={`control-btn ${cameraEnabled ? '' : 'off'}`} onClick={toggleCamera}>
+        <button type="button" className={`control-btn ${cameraEnabled ? '' : 'off'}`} onClick={toggleCamera} disabled={!meetingStarted}>
           {cameraEnabled ? <FiVideo /> : <FiVideoOff />} {cameraEnabled ? 'Camera Off' : 'Camera On'}
         </button>
 
         {isAdmin && (
-          <button type="button" className="control-btn warn" onClick={mutePatient}>
+          <button type="button" className="control-btn warn" onClick={mutePatient} disabled={!meetingStarted || !patientParticipant}>
             <FiVolumeX /> Mute Patient
           </button>
         )}
@@ -1144,7 +1177,7 @@ function Consultation() {
             type="button"
             className="control-btn warn"
             onClick={togglePatientCamera}
-            disabled={!patientParticipant}
+            disabled={!meetingStarted || !patientParticipant}
           >
             {patientParticipant?.cameraEnabled === false ? <FiVideo /> : <FiVideoOff />}
             {patientParticipant?.cameraEnabled === false ? ' Camera On Patient' : ' Camera Off Patient'}
@@ -1152,7 +1185,7 @@ function Consultation() {
         )}
 
         {isAdmin && (
-          <button type="button" className="control-btn danger" onClick={endMeetingAsAdmin}>
+          <button type="button" className="control-btn danger" onClick={endMeetingAsAdmin} disabled={!meetingStarted}>
             <FiPhoneOff /> End Meeting
           </button>
         )}
