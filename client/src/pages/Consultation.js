@@ -47,10 +47,16 @@ const RTC_CONFIG = {
   iceCandidatePoolSize: 4
 };
 
+const JITSI_DOMAIN = 'meet.jit.si';
+
 const createClientId = () => {
   if (window.crypto?.randomUUID) return window.crypto.randomUUID();
   return `client-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
+
+const toHostedRoomName = (appointmentId) => (
+  `DrMerceline-${String(appointmentId || 'consultation')}`.replace(/[^a-zA-Z0-9-_]/g, '-')
+);
 
 function Consultation() {
   const { appointmentId } = useParams();
@@ -72,6 +78,8 @@ function Consultation() {
   const [remoteHasAudio, setRemoteHasAudio] = useState(false);
   const [remoteHasVideo, setRemoteHasVideo] = useState(false);
   const [connectionMessage, setConnectionMessage] = useState('');
+  const [backupRoomAvailable, setBackupRoomAvailable] = useState(false);
+  const [usingHostedFallback, setUsingHostedFallback] = useState(false);
 
   const meetingClientIdRef = useRef(null);
   const pollIntervalRef = useRef(null);
@@ -101,6 +109,7 @@ function Consultation() {
   const endRedirectTimerRef = useRef(null);
   const remoteParticipant = participants[0] || null;
   const patientParticipant = participants.find((p) => p.role === 'patient') || null;
+  const hostedRoomUrl = `https://${JITSI_DOMAIN}/${toHostedRoomName(appointmentId)}`;
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -249,7 +258,8 @@ function Consultation() {
       }
 
       if (attempts >= 3 && !hasRemoteTracks()) {
-        setConnectionMessage('Video/audio still cannot connect. Check Vercel REACT_APP_ICE_SERVERS or use private TURN relay credentials, then redeploy.');
+        setBackupRoomAvailable(true);
+        setConnectionMessage('Custom video/audio could not connect. Use the backup video room so the consultation can continue.');
       } else {
         scheduleConnectionRetry(socketId, currentPc, 6000);
       }
@@ -888,6 +898,15 @@ function Consultation() {
     }
   };
 
+  const useBackupVideoRoom = () => {
+    cleanupMeeting();
+    setBackupRoomAvailable(false);
+    setConnectionMessage('');
+    setMediaWarning('');
+    setUsingHostedFallback(true);
+    setMeetingStarted(true);
+  };
+
   const emitParticipantState = (nextMicEnabled, nextCameraEnabled) => {
     sendParticipantState(nextMicEnabled, nextCameraEnabled);
   };
@@ -1217,10 +1236,29 @@ function Consultation() {
         <div className="room-alert room-alert-danger">{error}</div>
       )}
       {connectionMessage && meetingStarted && (
-        <div className="room-alert room-alert-danger">{connectionMessage}</div>
+        <div className="room-alert room-alert-danger">
+          {connectionMessage}
+          {backupRoomAvailable && !usingHostedFallback && (
+            <button type="button" className="inline-alert-action" onClick={useBackupVideoRoom}>
+              Use backup video room
+            </button>
+          )}
+        </div>
       )}
 
-      <>
+      {usingHostedFallback ? (
+        <div className="hosted-meeting-panel">
+          <iframe
+            title="Backup consultation video room"
+            src={hostedRoomUrl}
+            allow="camera; microphone; fullscreen; display-capture; autoplay; clipboard-write"
+            allowFullScreen
+            referrerPolicy="no-referrer"
+            className="hosted-meeting-frame"
+          />
+        </div>
+      ) : (
+        <>
         <div className="video-grid">
         <div className="video-card local">
           <div className="video-label">You ({isAdmin ? 'Admin' : 'Patient'})</div>
@@ -1311,6 +1349,7 @@ function Consultation() {
         )}
       </div>
       </>
+      )}
     </div>
   );
 }
