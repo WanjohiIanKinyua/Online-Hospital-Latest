@@ -14,7 +14,7 @@ const chatRoutes = require('./routes/chatRoutes');
 const meetingRoutes = require('./routes/meetingRoutes');
 
 const app = express();
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,https://drnaserianonlinehospital.vercel.app')
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);

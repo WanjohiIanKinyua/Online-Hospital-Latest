@@ -530,7 +530,7 @@ const initializeDatabase = async () => {
         {
           id: 'demo-admin',
           fullName: 'Admin User',
-          email: 'drnaserian@admin.com',
+          email: 'admin@eliteonlinehealthcare.com',
           phone: '+254712345679',
           role: 'admin',
           dateOfBirth: '1985-03-20',

@@ -87,8 +87,8 @@ function Register({ setIsAuthenticated, setUserRole }) {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h1>Dr.Merceline Naserian</h1>
-          <p>Online Hospital</p>
+          <h1>Elite Online Healthcare</h1>
+          <p>Telemedicine Platform</p>
         </div>
 
         <form onSubmit={handleRegister}>

@@ -84,7 +84,7 @@ function AdminDashboard() {
       const now = new Date();
       const generatedAt = now.toLocaleString();
       const csvRows = [
-        ['Dr. Merceline Online Healthcare Platform - Income Report'],
+        ['Elite Online Healthcare - Income Report'],
         [`Generated At,${generatedAt}`],
         [`Total Income (KSH),${stats.totalRevenue || 0}`],
         [''],

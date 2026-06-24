@@ -25,7 +25,7 @@ function LandingPage() {
             <div className="brand-icon">
               <FiHeart size={20} />
             </div>
-            <span className="brand-name">Dr.Merceline Naserian</span>
+            <span className="brand-name">Elite Online Healthcare</span>
           </Link>
 
           <div className="navbar-links desktop">
@@ -59,7 +59,7 @@ function LandingPage() {
           <div className="hero-content">
             <div className="hero-subtitle">
               <FiBriefcase size={14} />
-              Dr. merceline Online healthcare platform
+              Elite Online Healthcare platform
             </div>
 
             <h1 className="hero-title">
@@ -92,7 +92,7 @@ function LandingPage() {
 
               <img
                 className="hero-doctor-image"
-                src="/images/Naserian.jpeg"
+                src="/images/EliteHealthcare.jpeg"
                 alt="Doctor using a tablet"
               />
             </div>
@@ -198,7 +198,7 @@ function LandingPage() {
         <div className="cta-container">
           <div className="cta-content">
             <h2>Ready to Experience Better Healthcare?</h2>
-            <p>Join thousands of patients who trust Dr.Merceline Naserian for quality medical consultations.</p>
+            <p>Join thousands of patients who trust Elite Online Healthcare for quality medical consultations.</p>
             <Link to="/register" className="btn btn-primary btn-large">Create Your Account</Link>
           </div>
         </div>
@@ -206,7 +206,7 @@ function LandingPage() {
 
       <footer className="footer">
         <div className="footer-container">
-          <p>&copy; 2026 Dr.Merceline Naserian Online Hospital. All rights reserved.</p>
+          <p>&copy; 2026 Elite Online Healthcare. All rights reserved.</p>
         </div>
       </footer>
     </div>
@@ -214,6 +214,5 @@ function LandingPage() {
 }
 
 export default LandingPage;
-
 
 

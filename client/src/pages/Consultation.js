@@ -58,7 +58,7 @@ const createClientId = () => {
 };
 
 const toHostedRoomName = (appointmentId) => (
-  `DrMerceline-${String(appointmentId || 'consultation')}`.replace(/[^a-zA-Z0-9-_]/g, '-')
+  `EliteOnlineHealthcare-${String(appointmentId || 'consultation')}`.replace(/[^a-zA-Z0-9-_]/g, '-')
 );
 
 function Consultation() {

@@ -1,4 +1,4 @@
-# Dr.Merceline Naserian Online Hospital
+# Elite Online Healthcare
 
 A full-stack telemedicine application built with:
 - Frontend: React

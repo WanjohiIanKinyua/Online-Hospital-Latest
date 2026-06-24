@@ -1,4 +1,4 @@
-QUICK START - Dr.Merceline Naserian Online Hospital
+QUICK START - Elite Online Healthcare
 
 1) Start Backend
 cd c:\xampp\htdocs\Hosi\server
@@ -26,7 +26,7 @@ Patient:
   Password: password
 
 Admin:
-  Email: drnaserian@admin.com
+  Email: admin@eliteonlinehealthcare.com
   Password: password
 
 Important

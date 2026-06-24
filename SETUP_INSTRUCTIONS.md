@@ -1,4 +1,4 @@
-# Setup Instructions - Dr.Merceline Naserian Online Hospital
+# Setup Instructions - Elite Online Healthcare
 
 This guide is for running the project locally on desktop.
 
@@ -64,7 +64,7 @@ Patient:
 - Password: `password`
 
 Admin:
-- Email: `drnaserian@admin.com`
+- Email: `admin@eliteonlinehealthcare.com`
 - Password: `password`
 
 ## 6. Common Issues

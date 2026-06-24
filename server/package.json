@@ -1,7 +1,7 @@
 {
-  "name": "merceline-hospital-backend",
+  "name": "elite-online-healthcare-backend",
   "version": "1.0.0",
-  "description": "Backend for Dr.Merceline Naserian Online Hospital",
+  "description": "Backend for Elite Online Healthcare",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

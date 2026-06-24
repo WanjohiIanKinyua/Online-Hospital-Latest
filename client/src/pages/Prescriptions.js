@@ -54,7 +54,7 @@ function Prescriptions() {
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
-    doc.text('MERCELINE NASERIAN ONLINE HOSPITAL', left, y);
+    doc.text('ELITE ONLINE HEALTHCARE', left, y);
     y += 20;
     doc.setFontSize(12);
     doc.text('DIGITAL PRESCRIPTION', left, y);
@@ -83,7 +83,7 @@ function Prescriptions() {
 
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(9);
-    const disclaimer = 'Disclaimer: This is a digital prescription issued by Dr.Merceline Naserian Online Hospital. Please use it as instructed by your doctor.';
+    const disclaimer = 'Disclaimer: This is a digital prescription issued by Elite Online Healthcare. Please use it as instructed by your doctor.';
     const disclaimerLines = doc.splitTextToSize(disclaimer, maxWidth);
     doc.text(disclaimerLines, left, y + 8);
 
@@ -92,7 +92,7 @@ function Prescriptions() {
 
   const generatePrescriptionDocument = (prescription) => {
     return `
-MERCELINE NASERIAN ONLINE HOSPITAL
+ELITE ONLINE HEALTHCARE
 DIGITAL PRESCRIPTION
 
 Prescription ID: ${prescription.id}
@@ -115,7 +115,7 @@ ${prescription.followUpRecommendations || 'Please follow up with your doctor as 
 
 ====================================
 
-Disclaimer: This is a digital prescription issued by Dr.Merceline Naserian Online Hospital.
+Disclaimer: This is a digital prescription issued by Elite Online Healthcare.
 Please use it as instructed by your doctor.
     `;
   };
