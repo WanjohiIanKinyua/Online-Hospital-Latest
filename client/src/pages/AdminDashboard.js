@@ -142,6 +142,7 @@ function AdminDashboard() {
           <div className="header-text">
             <h1 className="dashboard-title">Admin Dashboard</h1>
             <p className="dashboard-subtitle">Overview of hospital performance and recent activity</p>
+            <p className="dashboard-founder">Founder: Dr. Naserian</p>
           </div>
           <div className="dashboard-header-actions">
             <button

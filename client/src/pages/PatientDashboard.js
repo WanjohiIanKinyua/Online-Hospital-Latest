@@ -133,6 +133,7 @@ function PatientDashboard() {
           <div className="header-text">
             <h1 className="dashboard-title">Patient Dashboard</h1>
             <p className="dashboard-subtitle">Welcome back! Here's your health overview.</p>
+            <p className="dashboard-founder">Founder: Dr. Naserian</p>
           </div>
         </div>
 

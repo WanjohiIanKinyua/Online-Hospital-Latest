@@ -139,6 +139,13 @@
   font-weight: 500;
 }
 
+.dashboard-founder {
+  margin-top: 0.35rem;
+  color: #0f766e;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
 /* Stats Grid */
 .stats-grid {
   display: grid;

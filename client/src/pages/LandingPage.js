@@ -92,7 +92,7 @@ function LandingPage() {
 
               <img
                 className="hero-doctor-image"
-                src="/images/EliteHealthcare.jpeg"
+                src="/images/Naserian.jpeg"
                 alt="Doctor using a tablet"
               />
             </div>
@@ -214,5 +214,4 @@ function LandingPage() {
 }
 
 export default LandingPage;
-
 
