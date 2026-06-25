@@ -8,7 +8,15 @@
       "destination": "/api"
     },
     {
-      "source": "/((?!api/|static/|asset-manifest\\.json|favicon\\.ico|manifest\\.json|robots\\.txt).*)",
+      "source": "/robots.txt",
+      "destination": "/api/seo/robots"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/seo/sitemap"
+    },
+    {
+      "source": "/((?!api/|static/|asset-manifest\\.json|favicon\\.ico|manifest\\.json|robots\\.txt|sitemap\\.xml).*)",
       "destination": "/index.html"
     }
   ]

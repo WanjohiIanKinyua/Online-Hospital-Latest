@@ -29,6 +29,7 @@ import BookAppointment from './pages/BookAppointment';
 import Consultation from './pages/Consultation';
 import PaymentPage from './pages/PaymentPage';
 import Prescriptions from './pages/Prescriptions';
+import SeoMeta from './components/SeoMeta';
 
 const IDLE_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour
 const ACTIVITY_POLL_MS = 5000;
@@ -473,6 +474,7 @@ function App() {
 
   return (
     <Router>
+      <SeoMeta />
       <IdleSessionHandler isAuthenticated={isAuthenticated} userRole={userRole} />
       <GlobalActivityNotifier isAuthenticated={isAuthenticated} userRole={userRole} />
       <GlobalAlertBridge />

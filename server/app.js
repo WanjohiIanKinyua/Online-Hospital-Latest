@@ -12,6 +12,7 @@ const prescriptionRoutes = require('./routes/prescriptionRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const meetingRoutes = require('./routes/meetingRoutes');
+const seoRoutes = require('./routes/seoRoutes');
 
 const app = express();
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000')
@@ -52,6 +53,8 @@ app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/meetings', meetingRoutes);
+app.use('/api/seo', seoRoutes);
+app.use('/', seoRoutes);
 
 app.get('/', (req, res) => res.send('API running'));
 
