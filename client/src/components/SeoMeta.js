@@ -11,6 +11,11 @@ const PUBLIC_ROUTE_META = {
     description: DEFAULT_DESCRIPTION,
     robots: 'index,follow'
   },
+  '/about': {
+    title: 'About Elite Online Healthcare | Contact Online Healthcare Support',
+    description: 'Learn about Elite Online Healthcare, contact the team by email, and access online appointment, consultation, and prescription support.',
+    robots: 'index,follow'
+  },
   '/login': {
     title: 'Login | Elite Online Healthcare',
     description: 'Log in to your Elite Online Healthcare account to manage appointments, consultations, and prescriptions.',

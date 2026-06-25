@@ -8,6 +8,7 @@ import { API_BASE_URL } from './config/api';
 
 // Pages
 import LandingPage from './pages/LandingPage';
+import AboutPage from './pages/AboutPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -479,6 +480,7 @@ function App() {
       <GlobalActivityNotifier isAuthenticated={isAuthenticated} userRole={userRole} />
       <GlobalAlertBridge />
       <Routes>
+        <Route path="/about" element={<AboutPage />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         {!isAuthenticated ? (

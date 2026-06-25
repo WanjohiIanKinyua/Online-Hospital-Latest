@@ -31,6 +31,7 @@ function LandingPage() {
           <div className="navbar-links desktop">
             <a href="#features" className="nav-link">Features</a>
             <a href="#how-it-works" className="nav-link">How it Works</a>
+            <Link to="/about" className="nav-link">About</Link>
             <Link to="/login" className="nav-link nav-login-link">Log in</Link>
             <Link to="/register" className="nav-button nav-signup">Get Started</Link>
           </div>
@@ -47,6 +48,7 @@ function LandingPage() {
             <div className="navbar-links mobile active">
               <a href="#features" className="nav-link" onClick={() => setMobileMenuOpen(false)}>Features</a>
               <a href="#how-it-works" className="nav-link" onClick={() => setMobileMenuOpen(false)}>How it Works</a>
+              <Link to="/about" className="nav-link" onClick={() => setMobileMenuOpen(false)}>About</Link>
               <Link to="/login" className="nav-link nav-login-link" onClick={() => setMobileMenuOpen(false)}>Log in</Link>
               <Link to="/register" className="nav-button nav-signup" onClick={() => setMobileMenuOpen(false)}>Get Started</Link>
             </div>

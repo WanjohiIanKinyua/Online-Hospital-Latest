@@ -4,6 +4,7 @@ const router = express.Router();
 
 const PUBLIC_ROUTES = [
   { path: '/', changefreq: 'weekly', priority: '1.0' },
+  { path: '/about', changefreq: 'monthly', priority: '0.7' },
   { path: '/register', changefreq: 'monthly', priority: '0.8' },
   { path: '/login', changefreq: 'monthly', priority: '0.4' },
   { path: '/forgot-password', changefreq: 'yearly', priority: '0.2' }
