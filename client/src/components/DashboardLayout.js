@@ -69,6 +69,14 @@ export function DashboardLayout({ children, role = 'patient' }) {
 
   const links = role === 'admin' ? adminLinks : patientLinks;
   const sidebarScrollKey = `sidebarScroll:${role}`;
+  const overviewPath = role === 'admin' ? '/admin' : '/dashboard';
+  const dashboardPaths = links.map((link) => link.to);
+  const shouldReplaceSidebarNavigation = (targetPath) => (
+    targetPath !== location.pathname &&
+    location.pathname !== overviewPath &&
+    dashboardPaths.includes(location.pathname) &&
+    dashboardPaths.includes(targetPath)
+  );
 
   useLayoutEffect(() => {
     const nav = sidebarNavRef.current;
@@ -167,6 +175,7 @@ export function DashboardLayout({ children, role = 'patient' }) {
             <Link
               key={link.to}
               to={link.to}
+              replace={shouldReplaceSidebarNavigation(link.to)}
               className={`nav-link ${isActive(link.to) ? 'active' : ''}`}
               onClick={() => {
                 if (sidebarNavRef.current) {
