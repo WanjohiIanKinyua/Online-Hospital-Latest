@@ -29,7 +29,7 @@ function AboutPage() {
           <div className="navbar-links desktop">
             <Link to="/#features" className="nav-link">Features</Link>
             <Link to="/#how-it-works" className="nav-link">How it Works</Link>
-            <Link to="/about" className="nav-link active">About</Link>
+            <Link to="/about" className="nav-link">About</Link>
             <Link to="/login" className="nav-link nav-login-link">Log in</Link>
             <Link to="/register" className="nav-button nav-signup">Get Started</Link>
           </div>
@@ -46,7 +46,7 @@ function AboutPage() {
             <div className="navbar-links mobile active">
               <Link to="/#features" className="nav-link" onClick={() => setMobileMenuOpen(false)}>Features</Link>
               <Link to="/#how-it-works" className="nav-link" onClick={() => setMobileMenuOpen(false)}>How it Works</Link>
-              <Link to="/about" className="nav-link active" onClick={() => setMobileMenuOpen(false)}>About</Link>
+              <Link to="/about" className="nav-link" onClick={() => setMobileMenuOpen(false)}>About</Link>
               <Link to="/login" className="nav-link nav-login-link" onClick={() => setMobileMenuOpen(false)}>Log in</Link>
               <Link to="/register" className="nav-button nav-signup" onClick={() => setMobileMenuOpen(false)}>Get Started</Link>
             </div>

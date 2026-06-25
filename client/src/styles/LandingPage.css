@@ -86,7 +86,15 @@
   display: none;
 }
 
-.nav-link {
+.landing-page .nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  padding-right: 0;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
   text-decoration: none;
   color: #4f5f6f !important;
   font-size: 24px;
@@ -95,12 +103,15 @@
   opacity: 1 !important;
 }
 
-.nav-link:hover {
+.landing-page .nav-link:hover {
+  background: transparent !important;
   color: #0b8f73 !important;
 }
 
-.nav-link.active {
+.landing-page .nav-link.active {
+  background: transparent !important;
   color: #0b8f73 !important;
+  box-shadow: none !important;
 }
 
 .nav-login-link {
