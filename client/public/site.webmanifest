@@ -1,7 +1,7 @@
 {
   "name": "Elite Online Healthcare",
   "short_name": "Elite Healthcare",
-  "description": "Online consultations, secure payments, video visits, and digital prescriptions.",
+  "description": "Elite Online Hospital consultations, secure payments, video visits, and digital prescriptions.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

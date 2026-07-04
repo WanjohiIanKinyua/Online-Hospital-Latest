@@ -61,11 +61,11 @@ function AboutPage() {
               <FiShield size={14} />
               Trusted online healthcare
             </div>
-            <h1>About Elite Online Healthcare</h1>
+            <h1>About Elite Online Hospital</h1>
             <p>
-              Elite Online Healthcare helps patients access convenient online consultations,
-              appointment booking, secure payments, and digital prescriptions from one simple
-              platform.
+              Elite Online Healthcare, also known as Elite Online Hospital, helps patients
+              access convenient online consultations, appointment booking, secure payments,
+              and digital prescriptions from one simple platform.
             </p>
             <div className="hero-buttons">
               <Link to="/register" className="btn btn-primary">Book a Consultation</Link>
@@ -123,8 +123,8 @@ function AboutPage() {
           <div>
             <h2>Patient-First Online Care</h2>
             <p>
-              The platform is designed to make healthcare access clearer and faster, from the
-              first booking request to the final prescription download.
+              The online hospital platform is designed to make healthcare access clearer and
+              faster, from the first booking request to the final prescription download.
             </p>
           </div>
           <Link to="/login" className="btn btn-primary">Access Your Account</Link>

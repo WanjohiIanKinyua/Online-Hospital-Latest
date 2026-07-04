@@ -61,19 +61,19 @@ function LandingPage() {
           <div className="hero-content">
             <div className="hero-subtitle">
               <FiBriefcase size={14} />
-              Elite Online Healthcare platform
+              Elite Online Hospital platform
             </div>
 
             <h1 className="hero-title">
-              Quality
+              Elite Online
               <br />
-              Healthcare,
+              Hospital,
               <br />
               <span className="highlight">Anytime, Anywhere</span>
             </h1>
 
             <p className="hero-description">
-              Book appointments, consult with doctors online, and receive digital prescriptions all from the comfort of your home.
+              Book appointments, consult with doctors online, and receive digital prescriptions through Elite Online Healthcare, a convenient online hospital platform for patients in Kenya.
             </p>
 
             <div className="hero-buttons">
@@ -106,7 +106,7 @@ function LandingPage() {
         <div className="features-container">
           <div className="section-header">
             <h2>Everything You Need for Better Healthcare</h2>
-            <p>A comprehensive telemedicine platform designed for simplicity and reliability.</p>
+            <p>A comprehensive online hospital and telemedicine platform designed for simplicity and reliability.</p>
           </div>
 
           <div className="features-grid">
@@ -199,8 +199,8 @@ function LandingPage() {
       <section className="cta">
         <div className="cta-container">
           <div className="cta-content">
-            <h2>Ready to Experience Better Healthcare?</h2>
-            <p>Join thousands of patients who trust Elite Online Healthcare for quality medical consultations.</p>
+            <h2>Ready to Experience Better Online Healthcare?</h2>
+            <p>If you are looking for the best online hospital experience, choose Elite Online Hospital for simple appointment booking, online doctor consultations, and digital prescriptions.</p>
             <Link to="/register" className="btn btn-primary btn-large">Create Your Account</Link>
           </div>
         </div>
