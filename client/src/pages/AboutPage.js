@@ -69,15 +69,15 @@ function AboutPage() {
             </p>
             <div className="hero-buttons">
               <Link to="/register" className="btn btn-primary">Book a Consultation</Link>
-              <a href="mailto:eliteonlinehealthcare@gmail.com" className="btn btn-secondary">Email Us</a>
+              <a href="mailto:info.eliteonlinehealthcare@gmail.com" className="btn btn-secondary">Email Us</a>
             </div>
           </div>
 
           <div className="about-contact-card">
             <h2>Contact Details</h2>
-            <a href="mailto:eliteonlinehealthcare@gmail.com" className="about-contact-link">
+            <a href="mailto:info.eliteonlinehealthcare@gmail.com" className="about-contact-link">
               <FiMail />
-              eliteonlinehealthcare@gmail.com
+              info.eliteonlinehealthcare@gmail.com
             </a>
             <p>
               Use this email for appointment support, consultation questions, prescription
