@@ -75,7 +75,7 @@ function Register({ setIsAuthenticated, setUserRole }) {
       setUserRole('patient');
       localStorage.setItem('loginSuccess', '1');
 
-      navigate('/dashboard');
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed. Please try again.');
     } finally {

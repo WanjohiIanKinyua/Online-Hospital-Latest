@@ -44,9 +44,9 @@ function Login({ setIsAuthenticated, setUserRole }) {
       setUserRole(role);
 
       if (role === 'admin') {
-        navigate('/admin');
+        navigate('/admin', { replace: true });
       } else {
-        navigate('/dashboard');
+        navigate('/dashboard', { replace: true });
       }
     } catch (err) {
       setError(err.response?.data?.error || err.message || 'Login failed. Please try again.');

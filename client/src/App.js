@@ -473,17 +473,22 @@ function App() {
     return <div className="loading">Loading...</div>;
   }
 
+  const storedRole = normalizeRole(localStorage.getItem('userRole'));
+  const hasStoredAuth = Boolean(localStorage.getItem('token') && ['patient', 'admin'].includes(storedRole));
+  const effectiveIsAuthenticated = isAuthenticated || hasStoredAuth;
+  const effectiveUserRole = userRole || (hasStoredAuth ? storedRole : null);
+
   return (
     <Router>
       <SeoMeta />
-      <IdleSessionHandler isAuthenticated={isAuthenticated} userRole={userRole} />
-      <GlobalActivityNotifier isAuthenticated={isAuthenticated} userRole={userRole} />
+      <IdleSessionHandler isAuthenticated={effectiveIsAuthenticated} userRole={effectiveUserRole} />
+      <GlobalActivityNotifier isAuthenticated={effectiveIsAuthenticated} userRole={effectiveUserRole} />
       <GlobalAlertBridge />
       <Routes>
         <Route path="/about" element={<AboutPage />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        {!isAuthenticated ? (
+        {!effectiveIsAuthenticated ? (
           <>
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login setIsAuthenticated={setIsAuthenticated} setUserRole={setUserRole} />} />
@@ -492,7 +497,7 @@ function App() {
           </>
         ) : (
           <>
-            {userRole === 'patient' && (
+            {effectiveUserRole === 'patient' && (
               <>
                 <Route path="/dashboard" element={<PatientDashboard />} />
                 <Route path="/book-appointment" element={<BookAppointment />} />
@@ -505,7 +510,7 @@ function App() {
                 <Route path="*" element={<Navigate to="/dashboard" />} />
               </>
             )}
-            {userRole === 'admin' && (
+            {effectiveUserRole === 'admin' && (
               <>
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/admin/schedule" element={<AdminSchedule />} />

@@ -221,6 +221,13 @@ const allSqliteStatement = (sql, values = []) => {
 };
 
 const db = {
+  getInfo() {
+    return {
+      type: useSqlite ? 'sqlite' : 'postgres',
+      usesDatabaseUrl: hasValidDatabaseUrl
+    };
+  },
+
   query: async (sql, params = []) => {
     if (useSqlite) {
       const rows = allSqliteStatement(sql, params);

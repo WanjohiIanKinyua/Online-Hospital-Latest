@@ -3,7 +3,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 require('dotenv').config();
 
-require('./database');
+const db = require('./database');
 
 const authRoutes = require('./routes/authRoutes');
 const appointmentRoutes = require('./routes/appointmentRoutes');
@@ -61,7 +61,10 @@ app.use('/', seoRoutes);
 app.get('/', (req, res) => res.send('API running'));
 
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ message: 'Server is running' });
+  res.status(200).json({
+    message: 'Server is running',
+    database: db.getInfo ? db.getInfo().type : 'unknown'
+  });
 });
 
 app.use((err, req, res, next) => {
