@@ -55,16 +55,16 @@ export function DashboardLayout({ children, role = 'patient' }) {
     { to: '/admin', icon: FiBarChart2, label: 'Overview' },
     { to: '/admin/schedule', icon: FiClock, label: 'Schedule' },
     { to: '/admin/approvals', icon: FiCheckSquare, label: 'Approvals' },
+    { to: '/admin/appointments', icon: FiCalendar, label: 'Appointments' },
+    { to: '/admin/doctor-notes', icon: FiEdit3, label: 'Doctor Notes' },
     { to: '/admin/book-for-patient', icon: FiUserPlus, label: 'Book Patient' },
     { to: '/admin/doctors', icon: FiUser, label: 'Doctors' },
-    { to: '/admin/doctor-notes', icon: FiEdit3, label: 'Doctor Notes' },
     {
       to: '/admin/chat',
       icon: FiMessageSquare,
       label: 'Chat Room',
       showUnreadBadge: true
     },
-    { to: '/admin/appointments', icon: FiCalendar, label: 'Appointments' },
     { to: '/admin/patients', icon: FiUsers, label: 'Patients' }
   ];
 
