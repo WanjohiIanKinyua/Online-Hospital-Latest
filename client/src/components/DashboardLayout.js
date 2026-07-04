@@ -142,9 +142,10 @@ export function DashboardLayout({ children, role = 'patient' }) {
   }, [role, token]);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userEmail');
+    ['token', 'userRole', 'userEmail', 'userId', 'userName', 'loginSuccess'].forEach((key) => {
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    });
     window.dispatchEvent(new Event('storage'));
     navigate('/');
   };

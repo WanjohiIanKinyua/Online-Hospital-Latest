@@ -6,6 +6,10 @@ import '../styles/AuthPages.css';
 import { API_BASE_URL } from '../config/api';
 
 const PASSWORD_POLICY_REGEX = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{6,}$/;
+const saveAuthItem = (key, value) => {
+  localStorage.setItem(key, value);
+  sessionStorage.setItem(key, value);
+};
 
 function Register({ setIsAuthenticated, setUserRole }) {
   const [formData, setFormData] = useState({
@@ -64,15 +68,15 @@ function Register({ setIsAuthenticated, setUserRole }) {
         address: formData.address
       });
 
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('userRole', 'patient');
-      localStorage.setItem('userId', response.data.userId);
-      localStorage.setItem('userName', formData.fullName);
-      localStorage.setItem('userEmail', formData.email);
+      saveAuthItem('token', response.data.token);
+      saveAuthItem('userRole', 'patient');
+      saveAuthItem('userId', response.data.userId);
+      saveAuthItem('userName', formData.fullName);
+      saveAuthItem('userEmail', formData.email);
 
       setIsAuthenticated(true);
       setUserRole('patient');
-      localStorage.setItem('loginSuccess', '1');
+      saveAuthItem('loginSuccess', '1');
 
       window.location.replace('/dashboard');
     } catch (err) {

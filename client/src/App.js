@@ -38,6 +38,18 @@ const ACTIVITY_POLL_MS = 5000;
 const toNumber = (value) => Number(value || 0);
 const authHeaders = (token) => ({ Authorization: `Bearer ${token}` });
 const normalizeRole = (role) => String(role || '').trim().toLowerCase();
+const getStoredAuthItem = (key) => (
+  localStorage.getItem(key) || sessionStorage.getItem(key)
+);
+
+const removeStoredAuthItem = (key) => {
+  localStorage.removeItem(key);
+  sessionStorage.removeItem(key);
+};
+
+const clearStoredAuth = () => {
+  ['token', 'userRole', 'userEmail', 'userId', 'userName', 'loginSuccess'].forEach(removeStoredAuthItem);
+};
 
 const getLatestAppointment = (appointments = []) => {
   if (!Array.isArray(appointments) || appointments.length === 0) return null;
@@ -102,11 +114,7 @@ function IdleSessionHandler({ isAuthenticated, userRole }) {
     let timeoutId;
 
     const logoutForInactivity = () => {
-      localStorage.removeItem('token');
-      localStorage.removeItem('userRole');
-      localStorage.removeItem('userEmail');
-      localStorage.removeItem('userId');
-      localStorage.removeItem('userName');
+      clearStoredAuth();
       window.dispatchEvent(new Event('storage'));
       navigate('/', { replace: true });
     };
@@ -440,16 +448,17 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   const checkAuth = () => {
-    const token = localStorage.getItem('token');
-    const role = normalizeRole(localStorage.getItem('userRole'));
+    const token = getStoredAuthItem('token');
+    const role = normalizeRole(getStoredAuthItem('userRole'));
     
     if (token && ['patient', 'admin'].includes(role)) {
+      localStorage.setItem('token', token);
+      localStorage.setItem('userRole', role);
       setIsAuthenticated(true);
       setUserRole(role);
     } else {
       if (token || role) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('userRole');
+        clearStoredAuth();
       }
       setIsAuthenticated(false);
       setUserRole(null);
@@ -473,10 +482,11 @@ function App() {
     return <div className="loading">Loading...</div>;
   }
 
-  const storedRole = normalizeRole(localStorage.getItem('userRole'));
-  const hasStoredAuth = Boolean(localStorage.getItem('token') && ['patient', 'admin'].includes(storedRole));
+  const storedRole = normalizeRole(getStoredAuthItem('userRole'));
+  const hasStoredAuth = Boolean(getStoredAuthItem('token') && ['patient', 'admin'].includes(storedRole));
   const effectiveIsAuthenticated = isAuthenticated || hasStoredAuth;
   const effectiveUserRole = userRole || (hasStoredAuth ? storedRole : null);
+  const defaultDashboardPath = effectiveUserRole === 'admin' ? '/admin' : '/dashboard';
 
   return (
     <Router>
@@ -497,6 +507,9 @@ function App() {
           </>
         ) : (
           <>
+            <Route path="/" element={<Navigate to={defaultDashboardPath} replace />} />
+            <Route path="/login" element={<Navigate to={defaultDashboardPath} replace />} />
+            <Route path="/register" element={<Navigate to={defaultDashboardPath} replace />} />
             {effectiveUserRole === 'patient' && (
               <>
                 <Route path="/dashboard" element={<PatientDashboard />} />

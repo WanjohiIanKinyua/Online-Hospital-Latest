@@ -6,6 +6,10 @@ import '../styles/AuthPages.css';
 import { API_BASE_URL } from '../config/api';
 
 const normalizeRole = (role) => String(role || '').trim().toLowerCase();
+const saveAuthItem = (key, value) => {
+  localStorage.setItem(key, value);
+  sessionStorage.setItem(key, value);
+};
 
 function Login({ setIsAuthenticated, setUserRole }) {
   const [email, setEmail] = useState('');
@@ -31,13 +35,13 @@ function Login({ setIsAuthenticated, setUserRole }) {
         throw new Error('Your account role is not recognized. Please contact support.');
       }
 
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('userRole', role);
-      localStorage.setItem('userId', response.data.user.id);
+      saveAuthItem('token', response.data.token);
+      saveAuthItem('userRole', role);
+      saveAuthItem('userId', response.data.user.id);
       const resolvedName = response.data.user.fullName || response.data.user.fullname || response.data.user.name || '';
-      localStorage.setItem('userName', resolvedName);
-      localStorage.setItem('userEmail', response.data.user.email);
-      localStorage.setItem('loginSuccess', '1');
+      saveAuthItem('userName', resolvedName);
+      saveAuthItem('userEmail', response.data.user.email);
+      saveAuthItem('loginSuccess', '1');
 
       setIsAuthenticated(true);
       setUserRole(role);
