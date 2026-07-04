@@ -29,6 +29,14 @@ function AdminAppointments() {
     const parsed = new Date(value);
     return Number.isNaN(parsed.getTime()) ? '-' : parsed.toLocaleDateString();
   };
+  const isAppointmentApproved = (appointment) => (
+    String(appointment?.approvalStatus || appointment?.approvalstatus || '').toLowerCase() === 'approved'
+  );
+  const requireApprovedAppointment = (appointment) => {
+    if (isAppointmentApproved(appointment)) return true;
+    alert('First approve the patient');
+    return false;
+  };
 
   const loadAppointments = useCallback(async () => {
     try {
@@ -56,6 +64,7 @@ function AdminAppointments() {
   };
 
   const openPrescriptionModal = (appointment) => {
+    if (!requireApprovedAppointment(appointment)) return;
     setSelectedAppointment(appointment);
     setModalType('prescription');
     setFormData({
@@ -94,6 +103,7 @@ function AdminAppointments() {
   };
 
   const handleIssuePrescription = async () => {
+    if (!requireApprovedAppointment(selectedAppointment)) return;
     if (!formData.medications.trim()) {
       alert('Please enter medications');
       return;
@@ -142,6 +152,11 @@ function AdminAppointments() {
   const handleFormChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const openConsultationRoom = (appointment) => {
+    if (!requireApprovedAppointment(appointment)) return;
+    navigate(`/consultation/${appointment.id}`);
   };
 
   if (loading) {
@@ -236,7 +251,7 @@ function AdminAppointments() {
                             )}
                             <button
                               className="btn-small"
-                              onClick={() => navigate(`/consultation/${apt.id}`)}
+                              onClick={() => openConsultationRoom(apt)}
                               title="Open consultation room"
                             >
                               <FiVideo size={14} />

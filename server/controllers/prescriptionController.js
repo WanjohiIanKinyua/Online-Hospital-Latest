@@ -18,6 +18,10 @@ exports.issuePrescription = (req, res) => {
       return res.status(404).json({ error: 'Appointment not found' });
     }
 
+    if (String(appointment.approvalStatus || appointment.approvalstatus || '').toLowerCase() !== 'approved') {
+      return res.status(400).json({ error: 'First approve the patient' });
+    }
+
     const prescriptionId = uuidv4();
 
     db.run(

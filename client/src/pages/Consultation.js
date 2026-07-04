@@ -114,6 +114,7 @@ function Consultation() {
   const hostedRoomName = toHostedRoomName(appointmentId);
   const hostedJitsiRoomName = JITSI_APP_ID ? `${JITSI_APP_ID}/${hostedRoomName}` : hostedRoomName;
   const hostedRoomUrl = `https://${JITSI_DOMAIN}/${hostedJitsiRoomName}`;
+  const appointmentApproved = String(appointment?.approvalStatus || appointment?.approvalstatus || '').toLowerCase() === 'approved';
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -639,6 +640,11 @@ function Consultation() {
 
   const startMeeting = async () => {
     if (startingMeeting || meetingStarted) return;
+
+    if (!appointmentApproved) {
+      alert(isAdmin ? 'First approve the patient' : 'This appointment has not been approved yet.');
+      return;
+    }
 
     if (USE_HOSTED_VIDEO_ROOM) {
       setError('');

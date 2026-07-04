@@ -67,7 +67,7 @@ const ensureMeetingAccess = async (roomId, user) => {
   }
 
   const appointment = await dbGet(
-    `SELECT id, patientId
+    `SELECT id, patientId, approvalStatus
      FROM appointments
      WHERE id = ?`,
     [appointmentId]
@@ -75,6 +75,10 @@ const ensureMeetingAccess = async (roomId, user) => {
 
   if (!appointment) {
     return { status: 404, error: 'Appointment not found' };
+  }
+
+  if (String(appointment.approvalStatus || appointment.approvalstatus || '').toLowerCase() !== 'approved') {
+    return { status: 403, error: 'First approve the patient' };
   }
 
   if (user.role === 'admin' || appointment.patientId === user.id) {
