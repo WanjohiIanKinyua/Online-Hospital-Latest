@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import '../styles/AuthPages.css';
@@ -13,7 +13,6 @@ function Login({ setIsAuthenticated, setUserRole }) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -43,11 +42,7 @@ function Login({ setIsAuthenticated, setUserRole }) {
       setIsAuthenticated(true);
       setUserRole(role);
 
-      if (role === 'admin') {
-        navigate('/admin', { replace: true });
-      } else {
-        navigate('/dashboard', { replace: true });
-      }
+      window.location.replace(role === 'admin' ? '/admin' : '/dashboard');
     } catch (err) {
       setError(err.response?.data?.error || err.message || 'Login failed. Please try again.');
     } finally {

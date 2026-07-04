@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import '../styles/AuthPages.css';
@@ -23,7 +23,6 @@ function Register({ setIsAuthenticated, setUserRole }) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -75,7 +74,7 @@ function Register({ setIsAuthenticated, setUserRole }) {
       setUserRole('patient');
       localStorage.setItem('loginSuccess', '1');
 
-      navigate('/dashboard', { replace: true });
+      window.location.replace('/dashboard');
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed. Please try again.');
     } finally {
