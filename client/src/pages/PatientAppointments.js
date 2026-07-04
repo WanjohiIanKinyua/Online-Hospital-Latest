@@ -1,10 +1,22 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import axios from 'axios';
 import DashboardLayout from '../components/DashboardLayout';
 import { FiVideo } from 'react-icons/fi';
 import '../styles/ModernDashboard.css';
 import { API_BASE_URL } from '../config/api';
+
+const JITSI_DOMAIN = process.env.REACT_APP_JITSI_DOMAIN || 'meet.jit.si';
+const JITSI_APP_ID = process.env.REACT_APP_JITSI_APP_ID || '';
+
+const toHostedRoomName = (appointmentId) => (
+  `EliteOnlineHealthcare-${String(appointmentId || 'consultation')}`.replace(/[^a-zA-Z0-9-_]/g, '-')
+);
+
+const getHostedRoomUrl = (appointmentId) => {
+  const roomName = toHostedRoomName(appointmentId);
+  const jitsiRoomName = JITSI_APP_ID ? `${JITSI_APP_ID}/${roomName}` : roomName;
+  return `https://${JITSI_DOMAIN}/${jitsiRoomName}`;
+};
 
 function PatientAppointments() {
   const [appointments, setAppointments] = useState([]);
@@ -161,9 +173,9 @@ function PatientAppointments() {
       }
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-          <Link to={`/consultation/${appointment.id}`} className="btn-join-meeting">
+          <a href={getHostedRoomUrl(appointment.id)} target="_blank" rel="noreferrer" className="btn-join-meeting">
             <FiVideo /> Enter Care Room
-          </Link>
+          </a>
           {appointment.meetingLink && (
             <a
               href={appointment.meetingLink}

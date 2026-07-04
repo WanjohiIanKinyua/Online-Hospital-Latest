@@ -6,6 +6,19 @@ import { FiVideo, FiCalendar, FiCheckCircle, FiFileText } from 'react-icons/fi';
 import '../styles/ModernDashboard.css';
 import { API_BASE_URL } from '../config/api';
 
+const JITSI_DOMAIN = process.env.REACT_APP_JITSI_DOMAIN || 'meet.jit.si';
+const JITSI_APP_ID = process.env.REACT_APP_JITSI_APP_ID || '';
+
+const toHostedRoomName = (appointmentId) => (
+  `EliteOnlineHealthcare-${String(appointmentId || 'consultation')}`.replace(/[^a-zA-Z0-9-_]/g, '-')
+);
+
+const getHostedRoomUrl = (appointmentId) => {
+  const roomName = toHostedRoomName(appointmentId);
+  const jitsiRoomName = JITSI_APP_ID ? `${JITSI_APP_ID}/${roomName}` : roomName;
+  return `https://${JITSI_DOMAIN}/${jitsiRoomName}`;
+};
+
 function PatientDashboard() {
   const navigate = useNavigate();
   const [appointments, setAppointments] = useState([]);
@@ -112,9 +125,9 @@ function PatientDashboard() {
         return <span className="text-muted">Session completed</span>;
       }
       return (
-        <Link to={`/consultation/${appointment.id}`} className="btn-join-meeting">
+        <a href={getHostedRoomUrl(appointment.id)} target="_blank" rel="noreferrer" className="btn-join-meeting">
           <FiVideo /> Enter Care Room
-        </Link>
+        </a>
       );
     }
 
