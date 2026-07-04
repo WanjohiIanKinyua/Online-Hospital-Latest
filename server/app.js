@@ -22,12 +22,14 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000')
 
 const isLocalOrigin = (origin) => /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/i.test(origin);
 const isVercelOrigin = (origin) => /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin);
+const isCustomDomainOrigin = (origin) => /^https:\/\/(www\.)?eliteonlinehospital\.com$/i.test(origin);
 
 const isOriginAllowed = (origin) => {
   if (!origin) return true;
   if (allowedOrigins.includes(origin)) return true;
   if (isLocalOrigin(origin)) return true;
   if (isVercelOrigin(origin)) return true;
+  if (isCustomDomainOrigin(origin)) return true;
   return false;
 };
 
