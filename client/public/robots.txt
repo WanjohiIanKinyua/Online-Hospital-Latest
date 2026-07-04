@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /appointments
+Disallow: /book-appointment
+Disallow: /chat
+Disallow: /profile
+Disallow: /prescriptions
+Disallow: /payment/
+Disallow: /consultation/
+
+Sitemap: https://eliteonlinehospital.com/sitemap-index.xml

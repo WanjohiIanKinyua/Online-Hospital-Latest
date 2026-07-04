@@ -8,18 +8,6 @@
       "destination": "/api"
     },
     {
-      "source": "/robots.txt",
-      "destination": "/api/seo/robots"
-    },
-    {
-      "source": "/sitemap.xml",
-      "destination": "/api/seo/sitemap"
-    },
-    {
-      "source": "/sitemap-index.xml",
-      "destination": "/api/seo/sitemap-index"
-    },
-    {
       "source": "/((?!api/|static/|asset-manifest\\.json|favicon\\.ico|manifest\\.json|robots\\.txt|sitemap\\.xml|sitemap-index\\.xml).*)",
       "destination": "/index.html"
     }
