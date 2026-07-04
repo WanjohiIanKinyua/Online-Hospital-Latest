@@ -71,4 +71,20 @@ router.get(['/sitemap', '/sitemap.xml'], (req, res) => {
   ].join('\n'));
 });
 
+router.get(['/sitemap-index', '/sitemap-index.xml'], (req, res) => {
+  const baseUrl = getBaseUrl(req);
+  const lastmod = new Date().toISOString().slice(0, 10);
+
+  res.type('application/xml').send([
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    '  <sitemap>',
+    `    <loc>${xmlEscape(`${baseUrl}/sitemap.xml`)}</loc>`,
+    `    <lastmod>${lastmod}</lastmod>`,
+    '  </sitemap>',
+    '</sitemapindex>',
+    ''
+  ].join('\n'));
+});
+
 module.exports = router;
