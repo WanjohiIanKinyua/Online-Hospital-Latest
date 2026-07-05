@@ -33,7 +33,7 @@ export function DashboardLayout({ children, role = 'patient' }) {
   const [theme, setTheme] = useState(() => {
     const savedTheme = localStorage.getItem('dashboardTheme');
     if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme;
-    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    return 'light';
   });
   const userEmail = localStorage.getItem('userEmail') || 'user@example.com';
   const token = localStorage.getItem('token');
