@@ -31,6 +31,7 @@ import Consultation from './pages/Consultation';
 import PaymentPage from './pages/PaymentPage';
 import Prescriptions from './pages/Prescriptions';
 import SeoMeta from './components/SeoMeta';
+import InstallAppPrompt from './components/InstallAppPrompt';
 
 const IDLE_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour
 const ACTIVITY_POLL_MS = 5000;
@@ -491,6 +492,7 @@ function App() {
   return (
     <Router>
       <SeoMeta />
+      <InstallAppPrompt />
       <IdleSessionHandler isAuthenticated={effectiveIsAuthenticated} userRole={effectiveUserRole} />
       <GlobalActivityNotifier isAuthenticated={effectiveIsAuthenticated} userRole={effectiveUserRole} />
       <GlobalAlertBridge />

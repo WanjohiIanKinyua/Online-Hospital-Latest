@@ -539,6 +539,81 @@ tr:hover {
   background: #bfdbfe;
 }
 
+.install-app-prompt {
+  position: fixed;
+  top: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3500;
+  width: min(620px, calc(100vw - 1.5rem));
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #dbeafe;
+  border-left: 5px solid #0ea5e9;
+  border-radius: 12px;
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.18);
+  padding: 0.8rem 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.install-app-prompt strong {
+  display: block;
+  font-size: 0.98rem;
+  font-weight: 800;
+}
+
+.install-app-prompt span {
+  display: block;
+  margin-top: 0.15rem;
+  color: #64748b;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.install-app-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.install-app-button {
+  border: none;
+  border-radius: 999px;
+  padding: 0.65rem 1rem;
+  background: #0f766e;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.install-app-button:hover {
+  background: #0d9488;
+}
+
+.install-app-dismiss {
+  width: 1.8rem;
+  height: 1.8rem;
+  border: none;
+  border-radius: 999px;
+  padding: 0;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.install-app-dismiss:hover {
+  background: #e2e8f0;
+}
+
 .global-alert-overlay {
   position: fixed;
   inset: 0;
@@ -643,6 +718,18 @@ tr:hover {
 }
 
 @media (max-width: 480px) {
+  .install-app-prompt {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.75rem;
+    top: 0.5rem;
+  }
+
+  .install-app-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
   .global-activity-notice {
     left: 0.75rem;
     right: 0.75rem;
