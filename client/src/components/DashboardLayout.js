@@ -17,7 +17,9 @@ import {
   FiUser,
   FiEdit3,
   FiMenu,
-  FiX
+  FiX,
+  FiMoon,
+  FiSun
 } from 'react-icons/fi';
 import '../styles/DashboardLayout.css';
 import { API_BASE_URL } from '../config/api';
@@ -28,6 +30,11 @@ export function DashboardLayout({ children, role = 'patient' }) {
   const sidebarNavRef = useRef(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [theme, setTheme] = useState(() => {
+    const savedTheme = localStorage.getItem('dashboardTheme');
+    if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme;
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
   const userEmail = localStorage.getItem('userEmail') || 'user@example.com';
   const token = localStorage.getItem('token');
   const rawUserName = localStorage.getItem('userName');
@@ -79,6 +86,16 @@ export function DashboardLayout({ children, role = 'patient' }) {
     dashboardPaths.includes(location.pathname) &&
     dashboardPaths.includes(targetPath)
   );
+
+  useEffect(() => {
+    document.body.classList.remove('dashboard-theme-light', 'dashboard-theme-dark');
+    document.body.classList.add(`dashboard-theme-${theme}`);
+    localStorage.setItem('dashboardTheme', theme);
+
+    return () => {
+      document.body.classList.remove('dashboard-theme-light', 'dashboard-theme-dark');
+    };
+  }, [theme]);
 
   useLayoutEffect(() => {
     const nav = sidebarNavRef.current;
@@ -153,6 +170,7 @@ export function DashboardLayout({ children, role = 'patient' }) {
   };
 
   const isActive = (path) => location.pathname === path;
+  const isDarkMode = theme === 'dark';
 
   return (
     <div className="dashboard-layout">
@@ -197,6 +215,18 @@ export function DashboardLayout({ children, role = 'patient' }) {
         </nav>
 
         <div className="sidebar-footer">
+          <button
+            type="button"
+            className="theme-toggle-button"
+            onClick={() => setTheme(isDarkMode ? 'light' : 'dark')}
+            aria-label={`Switch to ${isDarkMode ? 'light' : 'dark'} mode`}
+            aria-pressed={isDarkMode}
+          >
+            <span className="theme-toggle-icon">
+              {isDarkMode ? <FiSun /> : <FiMoon />}
+            </span>
+            <span>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
+          </button>
           <div className="user-info">
             <p className="user-email">{userEmail}</p>
           </div>

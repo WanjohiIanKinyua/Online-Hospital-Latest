@@ -240,6 +240,41 @@
   height: 1rem;
 }
 
+.theme-toggle-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.72rem 1rem;
+  background: rgba(14, 165, 233, 0.12);
+  border: 1px solid rgba(125, 211, 252, 0.32);
+  color: #e0f2fe;
+  border-radius: 0.625rem;
+  cursor: pointer;
+  font-weight: 700;
+  transition: all 0.25s ease;
+  font-size: 0.92rem;
+}
+
+.theme-toggle-button:hover {
+  background: rgba(14, 165, 233, 0.22);
+  border-color: rgba(125, 211, 252, 0.5);
+}
+
+.theme-toggle-icon {
+  width: 1rem;
+  height: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-toggle-icon svg {
+  width: 1rem;
+  height: 1rem;
+}
+
 /* Mobile Menu Toggle */
 .mobile-menu-toggle {
   display: none;
@@ -356,4 +391,175 @@
 
 .sidebar-nav::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+body.dashboard-theme-dark {
+  background: #0f172a;
+  color: #e5e7eb;
+}
+
+body.dashboard-theme-dark .dashboard-layout {
+  --background: #111827;
+  --card-bg: #172033;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --border-color: #334155;
+  --sidebar-bg: #020617;
+  --sidebar-accent: #1e293b;
+  --shadow-md: 0 10px 20px rgba(0, 0, 0, 0.28);
+  --shadow-lg: 0 18px 36px rgba(0, 0, 0, 0.34);
+  background: var(--background);
+}
+
+body.dashboard-theme-dark .dashboard-main,
+body.dashboard-theme-dark .dashboard-content,
+body.dashboard-theme-dark .book-appointment-page,
+body.dashboard-theme-dark .payment-page,
+body.dashboard-theme-dark .prescriptions-page,
+body.dashboard-theme-dark .chat-page {
+  background: #111827 !important;
+  color: #e5e7eb;
+}
+
+body.dashboard-theme-dark .dashboard-title,
+body.dashboard-theme-dark .card-title,
+body.dashboard-theme-dark .stat-value,
+body.dashboard-theme-dark .form-group label,
+body.dashboard-theme-dark .modal-header,
+body.dashboard-theme-dark .booking-card h1,
+body.dashboard-theme-dark .payment-card h1,
+body.dashboard-theme-dark .prescriptions-card h1,
+body.dashboard-theme-dark .chat-sidebar h3,
+body.dashboard-theme-dark h1,
+body.dashboard-theme-dark h2,
+body.dashboard-theme-dark h3 {
+  color: #f8fafc !important;
+}
+
+body.dashboard-theme-dark .dashboard-subtitle,
+body.dashboard-theme-dark .stat-label,
+body.dashboard-theme-dark .card-content,
+body.dashboard-theme-dark .appointment-details,
+body.dashboard-theme-dark .prescription-details,
+body.dashboard-theme-dark .user-email,
+body.dashboard-theme-dark p,
+body.dashboard-theme-dark td,
+body.dashboard-theme-dark label {
+  color: #cbd5e1;
+}
+
+body.dashboard-theme-dark .card,
+body.dashboard-theme-dark .stat-card,
+body.dashboard-theme-dark .booking-card,
+body.dashboard-theme-dark .payment-card,
+body.dashboard-theme-dark .prescriptions-card,
+body.dashboard-theme-dark .chat-sidebar,
+body.dashboard-theme-dark .chat-main,
+body.dashboard-theme-dark .chat-header,
+body.dashboard-theme-dark .modal-content,
+body.dashboard-theme-dark .form-card,
+body.dashboard-theme-dark .management-card,
+body.dashboard-theme-dark .doctor-notes-sidebar,
+body.dashboard-theme-dark .schedule-card,
+body.dashboard-theme-dark .patient-card,
+body.dashboard-theme-dark .doctor-card,
+body.dashboard-theme-dark .admin-form-card,
+body.dashboard-theme-dark .appointment-item,
+body.dashboard-theme-dark .prescription-item,
+body.dashboard-theme-dark .profile-section,
+body.dashboard-theme-dark .payment-summary,
+body.dashboard-theme-dark .card-details,
+body.dashboard-theme-dark .about-card {
+  background: #172033 !important;
+  border-color: #334155 !important;
+  color: #e5e7eb;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.3);
+}
+
+body.dashboard-theme-dark .card-header,
+body.dashboard-theme-dark .appointments-table th,
+body.dashboard-theme-dark .table-header,
+body.dashboard-theme-dark .detail-row,
+body.dashboard-theme-dark .chat-thread-item,
+body.dashboard-theme-dark .payment-info,
+body.dashboard-theme-dark .prescription-header {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc;
+}
+
+body.dashboard-theme-dark .appointments-table,
+body.dashboard-theme-dark table {
+  background: #172033;
+  color: #e5e7eb;
+}
+
+body.dashboard-theme-dark .appointments-table td,
+body.dashboard-theme-dark .appointments-table th,
+body.dashboard-theme-dark td,
+body.dashboard-theme-dark th {
+  border-color: #334155 !important;
+}
+
+body.dashboard-theme-dark tr:hover,
+body.dashboard-theme-dark .appointment-item:hover,
+body.dashboard-theme-dark .prescription-item:hover,
+body.dashboard-theme-dark .chat-thread-item:hover {
+  background: #22304a !important;
+}
+
+body.dashboard-theme-dark input,
+body.dashboard-theme-dark textarea,
+body.dashboard-theme-dark select {
+  background: #0f172a !important;
+  border-color: #475569 !important;
+  color: #f8fafc !important;
+}
+
+body.dashboard-theme-dark input::placeholder,
+body.dashboard-theme-dark textarea::placeholder {
+  color: #94a3b8;
+}
+
+body.dashboard-theme-dark input:focus,
+body.dashboard-theme-dark textarea:focus,
+body.dashboard-theme-dark select:focus {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.18) !important;
+}
+
+body.dashboard-theme-dark .mobile-menu-toggle {
+  background: #172033;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+body.dashboard-theme-dark .btn-cancel,
+body.dashboard-theme-dark .btn-secondary-small,
+body.dashboard-theme-dark .btn-download {
+  background: #334155 !important;
+  color: #f8fafc !important;
+}
+
+body.dashboard-theme-dark .message.received,
+body.dashboard-theme-dark .chat-message.received {
+  background: #1e293b !important;
+  color: #e5e7eb !important;
+}
+
+body.dashboard-theme-dark .message.sent,
+body.dashboard-theme-dark .chat-message.sent {
+  background: #0f766e !important;
+  color: #ffffff !important;
+}
+
+body.dashboard-theme-dark .empty-state,
+body.dashboard-theme-dark .empty-state-text {
+  color: #94a3b8;
+}
+
+body.dashboard-theme-dark .login-success-banner {
+  background: rgba(34, 197, 94, 0.14);
+  border-color: rgba(74, 222, 128, 0.45);
+  color: #bbf7d0;
 }
