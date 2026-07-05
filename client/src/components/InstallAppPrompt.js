@@ -1,14 +1,18 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 
 const DISMISSED_KEY = 'eliteOnlineHealthcareInstallDismissed';
+const PUBLIC_PATHS = new Set(['/', '/about', '/login', '/register', '/forgot-password', '/reset-password']);
 
 const isAppInstalled = () => (
   window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone
 );
 
 function InstallAppPrompt() {
+  const location = useLocation();
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [visible, setVisible] = useState(false);
+  const isPublicPage = PUBLIC_PATHS.has(location.pathname);
 
   useEffect(() => {
     if (isAppInstalled() || localStorage.getItem(DISMISSED_KEY) === 'true') {
@@ -36,13 +40,26 @@ function InstallAppPrompt() {
     };
   }, []);
 
+  useEffect(() => {
+    if (
+      isPublicPage &&
+      !isAppInstalled() &&
+      localStorage.getItem(DISMISSED_KEY) !== 'true'
+    ) {
+      setVisible(true);
+    }
+  }, [isPublicPage]);
+
   const dismissPrompt = () => {
     setVisible(false);
     localStorage.setItem(DISMISSED_KEY, 'true');
   };
 
   const installApp = async () => {
-    if (!deferredPrompt) return;
+    if (!deferredPrompt) {
+      window.alert('To install the app, open your browser menu and choose "Install app" or "Add to home screen".');
+      return;
+    }
 
     deferredPrompt.prompt();
     const choice = await deferredPrompt.userChoice;
@@ -53,7 +70,7 @@ function InstallAppPrompt() {
     }
   };
 
-  if (!visible || !deferredPrompt) return null;
+  if (!visible) return null;
 
   return (
     <div className="install-app-prompt" role="region" aria-label="Install app prompt">
