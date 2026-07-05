@@ -31,9 +31,10 @@ export function DashboardLayout({ children, role = 'patient' }) {
   const userEmail = localStorage.getItem('userEmail') || 'user@example.com';
   const token = localStorage.getItem('token');
   const rawUserName = localStorage.getItem('userName');
-  const fallbackUserName = role === 'admin' ? 'Admin' : (userEmail.split('@')[0] || 'User');
-  const userName =
-    rawUserName && rawUserName !== 'undefined' && rawUserName !== 'null' && rawUserName.toLowerCase() !== 'user'
+  const fallbackUserName = userEmail.split('@')[0] || 'User';
+  const userName = role === 'admin'
+    ? 'Dr. Naserian'
+    : rawUserName && rawUserName !== 'undefined' && rawUserName !== 'null' && rawUserName.toLowerCase() !== 'user'
       ? rawUserName
       : fallbackUserName;
 
