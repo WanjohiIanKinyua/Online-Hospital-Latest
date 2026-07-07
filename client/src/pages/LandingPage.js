@@ -57,7 +57,7 @@ function LandingPage() {
           <div className="hero-content">
             <div className="hero-subtitle">
               <FiBriefcase size={14} />
-              Your healthcare solution
+              Elite Online Hospital
             </div>
 
             <h1 className="hero-title">
