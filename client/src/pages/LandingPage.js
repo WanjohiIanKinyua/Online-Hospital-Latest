@@ -57,19 +57,19 @@ function LandingPage() {
           <div className="hero-content">
             <div className="hero-subtitle">
               <FiBriefcase size={14} />
-              Elite Online Hospital platform
+              Your healthcare solution
             </div>
 
             <h1 className="hero-title">
-              Elite Online
+              Quality Care,
               <br />
-              Hospital,
+              On Your Time,
               <br />
               <span className="highlight">Anytime, Anywhere</span>
             </h1>
 
             <p className="hero-description">
-              Book appointments, consult with doctors online, and receive digital prescriptions through Elite Online Hospital, a convenient online hospital platform for patients in Kenya.
+              Book appointments, consult with doctors online, and receive digital prescriptions from the comfort of your home.
             </p>
 
             <div className="hero-buttons">
@@ -101,8 +101,8 @@ function LandingPage() {
       <section id="features" className="features">
         <div className="features-container">
           <div className="section-header">
-            <h2>Everything You Need for Better Hospital Care</h2>
-            <p>A comprehensive online hospital and telemedicine platform designed for simplicity and reliability.</p>
+            <h2>Everything You Need for Connected Care</h2>
+            <p>A simple telemedicine experience for booking, secure payments, video visits, and digital prescriptions.</p>
           </div>
 
           <div className="features-grid">
@@ -195,8 +195,8 @@ function LandingPage() {
       <section className="cta">
         <div className="cta-container">
           <div className="cta-content">
-            <h2>Ready to Experience Better Online Hospital Care?</h2>
-            <p>If you are looking for the best online hospital experience, choose Elite Online Hospital for simple appointment booking, online doctor consultations, and digital prescriptions.</p>
+            <h2>Ready for Care That Fits Your Day?</h2>
+            <p>Start with a quick booking, meet the doctor online, and keep your prescription safely in your dashboard.</p>
             <Link to="/register" className="btn btn-primary btn-large">Create Your Account</Link>
           </div>
         </div>
