@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
-const DISMISSED_KEY = 'eliteOnlineHealthcareInstallDismissed';
+const DISMISSED_KEY = 'eliteOnlineHospitalInstallDismissed';
 const PUBLIC_PATHS = new Set(['/', '/about', '/login', '/register', '/forgot-password', '/reset-password']);
 
 const isAppInstalled = () => (
@@ -75,7 +75,7 @@ function InstallAppPrompt() {
   return (
     <div className="install-app-prompt" role="region" aria-label="Install app prompt">
       <div>
-        <strong>Install Elite Online Healthcare</strong>
+        <strong>Install Elite Online Hospital</strong>
         <span>Get faster access from your home screen.</span>
       </div>
       <div className="install-app-actions">

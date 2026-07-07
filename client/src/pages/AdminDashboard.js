@@ -84,7 +84,7 @@ function AdminDashboard() {
       const now = new Date();
       const generatedAt = now.toLocaleString();
       const csvRows = [
-        ['Elite Online Healthcare - Income Report'],
+        ['Elite Online Hospital - Income Report'],
         [`Generated At,${generatedAt}`],
         [`Total Income (KSH),${stats.totalRevenue || 0}`],
         [''],
@@ -141,7 +141,7 @@ function AdminDashboard() {
         <div className="dashboard-header">
           <div className="header-text">
             <h1 className="dashboard-title">Admin Dashboard</h1>
-            <p className="dashboard-subtitle">Overview of healthcare performance and recent activity</p>
+            <p className="dashboard-subtitle">Overview of hospital performance and recent activity</p>
           </div>
           <div className="dashboard-header-actions">
             <button

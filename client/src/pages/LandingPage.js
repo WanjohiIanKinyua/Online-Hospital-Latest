@@ -25,7 +25,7 @@ function LandingPage() {
             <div className="brand-icon">
               <FiHeart size={20} />
             </div>
-            <span className="brand-name">Elite Online Healthcare</span>
+            <span className="brand-name">Elite Online Hospital</span>
           </Link>
 
           <div className="navbar-links desktop">
@@ -61,19 +61,19 @@ function LandingPage() {
           <div className="hero-content">
             <div className="hero-subtitle">
               <FiBriefcase size={14} />
-              Elite Online Healthcare platform
+              Elite Online Hospital platform
             </div>
 
             <h1 className="hero-title">
               Elite Online
               <br />
-              Healthcare,
+              Hospital,
               <br />
               <span className="highlight">Anytime, Anywhere</span>
             </h1>
 
             <p className="hero-description">
-              Book appointments, consult with doctors online, and receive digital prescriptions through Elite Online Healthcare, a convenient online healthcare platform for patients in Kenya.
+              Book appointments, consult with doctors online, and receive digital prescriptions through Elite Online Hospital, a convenient online hospital platform for patients in Kenya.
             </p>
 
             <div className="hero-buttons">
@@ -105,8 +105,8 @@ function LandingPage() {
       <section id="features" className="features">
         <div className="features-container">
           <div className="section-header">
-            <h2>Everything You Need for Better Healthcare</h2>
-            <p>A comprehensive online healthcare and telemedicine platform designed for simplicity and reliability.</p>
+            <h2>Everything You Need for Better Hospital Care</h2>
+            <p>A comprehensive online hospital and telemedicine platform designed for simplicity and reliability.</p>
           </div>
 
           <div className="features-grid">
@@ -165,7 +165,7 @@ function LandingPage() {
         <div className="how-it-works-container">
           <div className="section-header">
             <h2>How It Works</h2>
-            <p>Four simple steps to access quality healthcare from anywhere.</p>
+            <p>Four simple steps to access quality hospital care from anywhere.</p>
           </div>
 
           <div className="steps-grid">
@@ -199,8 +199,8 @@ function LandingPage() {
       <section className="cta">
         <div className="cta-container">
           <div className="cta-content">
-            <h2>Ready to Experience Better Online Healthcare?</h2>
-            <p>If you are looking for the best online healthcare experience, choose Elite Online Healthcare for simple appointment booking, online doctor consultations, and digital prescriptions.</p>
+            <h2>Ready to Experience Better Online Hospital Care?</h2>
+            <p>If you are looking for the best online hospital experience, choose Elite Online Hospital for simple appointment booking, online doctor consultations, and digital prescriptions.</p>
             <Link to="/register" className="btn btn-primary btn-large">Create Your Account</Link>
           </div>
         </div>
@@ -208,7 +208,7 @@ function LandingPage() {
 
       <footer className="footer">
         <div className="footer-container">
-          <p>&copy; 2026 Elite Online Healthcare. All rights reserved.</p>
+          <p>&copy; 2026 Elite Online Hospital. All rights reserved.</p>
         </div>
       </footer>
     </div>

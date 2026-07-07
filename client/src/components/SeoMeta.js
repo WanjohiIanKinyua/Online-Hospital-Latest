@@ -1,39 +1,39 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
-const SITE_NAME = 'Elite Online Healthcare';
+const SITE_NAME = 'Elite Online Hospital';
 const DEFAULT_DESCRIPTION =
-  'Elite Online Healthcare helps patients book online doctor consultations, secure payments, video visits, and digital prescriptions in Kenya.';
+  'Elite Online Hospital helps patients book online doctor consultations, secure payments, video visits, and digital prescriptions in Kenya.';
 
 const PUBLIC_ROUTE_META = {
   '/': {
-    title: 'Elite Online Healthcare | Online Doctor Consultations',
+    title: 'Elite Online Hospital | Online Doctor Consultations',
     description: DEFAULT_DESCRIPTION,
     robots: 'index,follow'
   },
   '/about': {
-    title: 'About Elite Online Healthcare | Contact Online Healthcare Support',
-    description: 'Learn about Elite Online Healthcare and contact the team for online appointment, consultation, and prescription support.',
+    title: 'About Elite Online Hospital | Contact Online Hospital Support',
+    description: 'Learn about Elite Online Hospital and contact the team for online appointment, consultation, and prescription support.',
     robots: 'index,follow'
   },
   '/login': {
-    title: 'Login | Elite Online Healthcare',
-    description: 'Log in to your Elite Online Healthcare account to manage appointments, consultations, and prescriptions.',
+    title: 'Login | Elite Online Hospital',
+    description: 'Log in to your Elite Online Hospital account to manage appointments, consultations, and prescriptions.',
     robots: 'noindex,follow'
   },
   '/register': {
-    title: 'Book Online Doctor Consultation | Elite Online Healthcare',
-    description: 'Create an Elite Online Healthcare account to book online healthcare consultations, video visits, and digital prescriptions.',
+    title: 'Book Online Doctor Consultation | Elite Online Hospital',
+    description: 'Create an Elite Online Hospital account to book online hospital consultations, video visits, and digital prescriptions.',
     robots: 'index,follow'
   },
   '/forgot-password': {
-    title: 'Forgot Password | Elite Online Healthcare',
-    description: 'Recover access to your Elite Online Healthcare account.',
+    title: 'Forgot Password | Elite Online Hospital',
+    description: 'Recover access to your Elite Online Hospital account.',
     robots: 'noindex,follow'
   },
   '/reset-password': {
-    title: 'Reset Password | Elite Online Healthcare',
-    description: 'Reset your Elite Online Healthcare account password.',
+    title: 'Reset Password | Elite Online Hospital',
+    description: 'Reset your Elite Online Hospital account password.',
     robots: 'noindex,follow'
   }
 };

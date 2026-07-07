@@ -9,7 +9,7 @@ const JITSI_DOMAIN = process.env.REACT_APP_JITSI_DOMAIN || 'meet.jit.si';
 const JITSI_APP_ID = process.env.REACT_APP_JITSI_APP_ID || '';
 
 const toHostedRoomName = (appointmentId) => (
-  `EliteOnlineHealthcare-${String(appointmentId || 'consultation')}`.replace(/[^a-zA-Z0-9-_]/g, '-')
+  `EliteOnlineHospital-${String(appointmentId || 'consultation')}`.replace(/[^a-zA-Z0-9-_]/g, '-')
 );
 
 const getHostedRoomUrl = (appointmentId) => {

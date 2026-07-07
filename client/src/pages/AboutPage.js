@@ -23,7 +23,7 @@ function AboutPage() {
             <div className="brand-icon">
               <FiHeart size={20} />
             </div>
-            <span className="brand-name">Elite Online Healthcare</span>
+            <span className="brand-name">Elite Online Hospital</span>
           </Link>
 
           <div className="navbar-links desktop">
@@ -59,11 +59,11 @@ function AboutPage() {
           <div className="about-hero-content">
             <div className="hero-subtitle">
               <FiShield size={14} />
-              Trusted online healthcare
+              Trusted online hospital
             </div>
-            <h1>About Elite Online Healthcare</h1>
+            <h1>About Elite Online Hospital</h1>
             <p>
-              Elite Online Healthcare helps patients access convenient online consultations,
+              Elite Online Hospital helps patients access convenient online consultations,
               appointment booking, secure payments, and digital prescriptions from one
               simple platform.
             </p>
@@ -123,7 +123,7 @@ function AboutPage() {
           <div>
             <h2>Patient-First Online Care</h2>
             <p>
-              The online healthcare platform is designed to make healthcare access clearer and
+              The online hospital platform is designed to make hospital care access clearer and
               faster, from the first booking request to the final prescription download.
             </p>
           </div>
@@ -133,7 +133,7 @@ function AboutPage() {
 
       <footer className="footer">
         <div className="footer-container">
-          <p>&copy; 2026 Elite Online Healthcare. All rights reserved.</p>
+          <p>&copy; 2026 Elite Online Hospital. All rights reserved.</p>
         </div>
       </footer>
     </div>

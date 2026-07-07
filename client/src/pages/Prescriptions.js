@@ -83,7 +83,7 @@ function Prescriptions() {
 
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(9);
-    const disclaimer = 'Disclaimer: This is a digital prescription issued by Elite Online Healthcare. Please use it as instructed by your doctor.';
+    const disclaimer = 'Disclaimer: This is a digital prescription issued by Elite Online Hospital. Please use it as instructed by your doctor.';
     const disclaimerLines = doc.splitTextToSize(disclaimer, maxWidth);
     doc.text(disclaimerLines, left, y + 8);
 
@@ -115,7 +115,7 @@ ${prescription.followUpRecommendations || 'Please follow up with your doctor as 
 
 ====================================
 
-Disclaimer: This is a digital prescription issued by Elite Online Healthcare.
+Disclaimer: This is a digital prescription issued by Elite Online Hospital.
 Please use it as instructed by your doctor.
     `;
   };
