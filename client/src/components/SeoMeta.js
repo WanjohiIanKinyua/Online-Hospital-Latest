@@ -76,7 +76,7 @@ function SeoMeta() {
   useEffect(() => {
     const meta = getMetaForPath(location.pathname);
     const canonicalUrl = `${window.location.origin}${location.pathname}`;
-    const imageUrl = `${window.location.origin}/images/elite.jpeg`;
+    const imageUrl = `${window.location.origin}/images/elite-logo.png`;
 
     document.title = meta.title;
     upsertCanonical(canonicalUrl);

@@ -61,6 +61,14 @@
   place-items: center;
 }
 
+.navbar-logo-image {
+  display: block;
+  width: auto;
+  height: 58px;
+  max-width: 260px;
+  object-fit: contain;
+}
+
 .brand-name {
   font-size: 33px;
   line-height: 1;
@@ -660,6 +668,11 @@
 
   .brand-name {
     font-size: 20px;
+  }
+
+  .navbar-logo-image {
+    height: 50px;
+    max-width: 210px;
   }
 
   .hero {

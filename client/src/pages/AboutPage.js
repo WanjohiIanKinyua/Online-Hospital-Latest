@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import {
   FiCalendar,
   FiFileText,
-  FiHeart,
   FiMail,
   FiMenu,
   FiShield,
@@ -20,10 +19,7 @@ function AboutPage() {
       <nav className="navbar">
         <div className="navbar-container">
           <Link to="/" className="navbar-brand">
-            <div className="brand-icon">
-              <FiHeart size={20} />
-            </div>
-            <span className="brand-name">Elite Online Hospital</span>
+            <img src="/images/elite-logo.png" alt="Elite Online Hospital" className="navbar-logo-image" />
           </Link>
 
           <div className="navbar-links desktop">

@@ -177,7 +177,7 @@ export function DashboardLayout({ children, role = 'patient' }) {
       <aside className={`dashboard-sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
           <Link to="/" className="brand-logo">
-            <span className="brand-icon">+</span>
+            <img src="/logo-192.png" alt="" className="dashboard-brand-mark" />
             <span className="brand-text-wrap">
               <span className="brand-name">{userName}</span>
               <span className="brand-status">

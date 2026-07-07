@@ -74,6 +74,17 @@
   flex-shrink: 0;
 }
 
+.dashboard-brand-mark {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 0.75rem;
+  object-fit: cover;
+  background: #ffffff;
+  padding: 0.18rem;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
 .brand-text-wrap {
   display: flex;
   flex-direction: column;
