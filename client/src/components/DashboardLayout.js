@@ -24,26 +24,35 @@ import {
 import '../styles/DashboardLayout.css';
 import { API_BASE_URL } from '../config/api';
 
+const getStoredUserEmail = () => localStorage.getItem('userEmail') || sessionStorage.getItem('userEmail') || '';
+const getStoredUserName = () => localStorage.getItem('userName') || sessionStorage.getItem('userName') || '';
+
+const isUsableUserName = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  return Boolean(normalized && normalized !== 'undefined' && normalized !== 'null' && normalized !== 'user');
+};
+
 export function DashboardLayout({ children, role = 'patient' }) {
   const location = useLocation();
   const navigate = useNavigate();
   const sidebarNavRef = useRef(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [profileName, setProfileName] = useState(getStoredUserName);
+  const [profileEmail, setProfileEmail] = useState(getStoredUserEmail);
   const [theme, setTheme] = useState(() => {
     const savedTheme = localStorage.getItem('dashboardTheme');
     if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme;
     return 'light';
   });
-  const userEmail = localStorage.getItem('userEmail') || 'user@example.com';
   const token = localStorage.getItem('token');
-  const rawUserName = localStorage.getItem('userName');
-  const fallbackUserName = userEmail.split('@')[0] || 'User';
+  const fallbackUserName = profileEmail ? profileEmail.split('@')[0] : 'User';
   const userName = role === 'admin'
     ? 'Dr. Naserian'
-    : rawUserName && rawUserName !== 'undefined' && rawUserName !== 'null' && rawUserName.toLowerCase() !== 'user'
-      ? rawUserName
+    : isUsableUserName(profileName)
+      ? profileName.trim()
       : fallbackUserName;
+  const userEmail = profileEmail || '';
 
   const patientLinks = [
     { to: '/dashboard', icon: FiLayout, label: 'Overview' },
@@ -96,6 +105,57 @@ export function DashboardLayout({ children, role = 'patient' }) {
       document.body.classList.remove('dashboard-theme-light', 'dashboard-theme-dark');
     };
   }, [theme]);
+
+  useEffect(() => {
+    const syncStoredProfile = () => {
+      setProfileName(getStoredUserName());
+      setProfileEmail(getStoredUserEmail());
+    };
+
+    window.addEventListener('storage', syncStoredProfile);
+    return () => {
+      window.removeEventListener('storage', syncStoredProfile);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!token || role !== 'patient') return undefined;
+
+    let cancelled = false;
+
+    const loadPatientProfile = async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/api/auth/profile`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (cancelled) return;
+
+        const nextName = response.data?.fullName || response.data?.fullname || '';
+        const nextEmail = response.data?.email || '';
+
+        if (nextName) {
+          localStorage.setItem('userName', nextName);
+          sessionStorage.setItem('userName', nextName);
+          setProfileName(nextName);
+        }
+
+        if (nextEmail) {
+          localStorage.setItem('userEmail', nextEmail);
+          sessionStorage.setItem('userEmail', nextEmail);
+          setProfileEmail(nextEmail);
+        }
+      } catch (error) {
+        // Keep stored auth display values if profile refresh is temporarily unavailable.
+      }
+    };
+
+    loadPatientProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [role, token]);
 
   useLayoutEffect(() => {
     const nav = sidebarNavRef.current;
