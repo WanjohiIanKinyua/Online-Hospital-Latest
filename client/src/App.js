@@ -33,7 +33,9 @@ import Prescriptions from './pages/Prescriptions';
 import SeoMeta from './components/SeoMeta';
 import InstallAppPrompt from './components/InstallAppPrompt';
 
-const IDLE_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour
+const IDLE_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+const IDLE_CHECK_MS = 1000;
+const LAST_ACTIVITY_STORAGE_KEY = 'eliteLastActivityAt';
 const ACTIVITY_POLL_MS = 5000;
 
 const toNumber = (value) => Number(value || 0);
@@ -112,17 +114,37 @@ function IdleSessionHandler({ isAuthenticated, userRole }) {
       return undefined;
     }
 
-    let timeoutId;
+    let checkIntervalId;
+    let hasLoggedOut = false;
+    let lastRecordedAt = 0;
 
     const logoutForInactivity = () => {
+      if (hasLoggedOut) return;
+      hasLoggedOut = true;
       clearStoredAuth();
+      localStorage.removeItem(LAST_ACTIVITY_STORAGE_KEY);
       window.dispatchEvent(new Event('storage'));
       navigate('/', { replace: true });
     };
 
-    const resetInactivityTimer = () => {
-      window.clearTimeout(timeoutId);
-      timeoutId = window.setTimeout(logoutForInactivity, IDLE_TIMEOUT_MS);
+    const getLastActivityAt = () => {
+      const savedActivityAt = Number(localStorage.getItem(LAST_ACTIVITY_STORAGE_KEY) || 0);
+      return Number.isFinite(savedActivityAt) && savedActivityAt > 0 ? savedActivityAt : 0;
+    };
+
+    const recordActivity = () => {
+      if (hasLoggedOut) return;
+      const now = Date.now();
+      if (now - lastRecordedAt < 1000) return;
+      lastRecordedAt = now;
+      localStorage.setItem(LAST_ACTIVITY_STORAGE_KEY, String(now));
+    };
+
+    const checkInactivity = () => {
+      const lastActivityAt = getLastActivityAt();
+      if (lastActivityAt > 0 && Date.now() - lastActivityAt >= IDLE_TIMEOUT_MS) {
+        logoutForInactivity();
+      }
     };
 
     const activityEvents = [
@@ -135,15 +157,20 @@ function IdleSessionHandler({ isAuthenticated, userRole }) {
     ];
 
     activityEvents.forEach((eventName) => {
-      window.addEventListener(eventName, resetInactivityTimer, { passive: true });
+      window.addEventListener(eventName, recordActivity, { passive: true });
     });
 
-    resetInactivityTimer();
+    if (getLastActivityAt() > 0) {
+      checkInactivity();
+    } else {
+      recordActivity();
+    }
+    checkIntervalId = window.setInterval(checkInactivity, IDLE_CHECK_MS);
 
     return () => {
-      window.clearTimeout(timeoutId);
+      window.clearInterval(checkIntervalId);
       activityEvents.forEach((eventName) => {
-        window.removeEventListener(eventName, resetInactivityTimer);
+        window.removeEventListener(eventName, recordActivity);
       });
     };
   }, [isAuthenticated, userRole, navigate]);
