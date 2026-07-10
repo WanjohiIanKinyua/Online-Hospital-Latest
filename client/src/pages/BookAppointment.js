@@ -20,7 +20,8 @@ function BookAppointment() {
   const [availableSlots, setAvailableSlots] = useState([]);
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
-  const paymentPhoneNumber = '0703120716';
+  const paymentPhoneNumber = '0713110880';
+  const paymentReceiverName = 'Merceline';
 
   useEffect(() => {
     const fetchDoctors = async () => {
@@ -212,6 +213,7 @@ function BookAppointment() {
               <div className="payment-instruction">
                 <span>Payment</span>
                 <strong>Send money to {paymentPhoneNumber}</strong>
+                <p>Name: {paymentReceiverName}</p>
               </div>
 
               <div className="booking-summary">

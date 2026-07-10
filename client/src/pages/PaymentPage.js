@@ -13,7 +13,8 @@ function PaymentPage() {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
-  const paymentPhoneNumber = '0703120716';
+  const paymentPhoneNumber = '0713110880';
+  const paymentReceiverName = 'Merceline';
 
   const fetchAppointment = useCallback(async () => {
     try {
@@ -122,6 +123,7 @@ function PaymentPage() {
             <div className="manual-payment-instruction">
               <span>Payment</span>
               <strong>Send money to {paymentPhoneNumber}</strong>
+              <p>Name: {paymentReceiverName}</p>
             </div>
 
             <div className="price-summary">

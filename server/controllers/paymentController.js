@@ -28,7 +28,7 @@ exports.createPayment = (req, res) => {
         ? `MPESA-${Date.now()}`
         : `CARD-${Date.now()}`;
     const savedPaymentMethod = isManualPhonePayment
-      ? `send_money:${phoneNumber || '0703120716'}`
+      ? `send_money:${phoneNumber || '0713110880'}`
       : paymentMethod === 'mpesa'
         ? `mpesa:${phoneNumber || ''}`
         : `card:${(cardNumber || '').slice(-4)}`;
