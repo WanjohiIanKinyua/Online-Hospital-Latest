@@ -141,6 +141,7 @@ const keyMap = {
   createdat: 'createdAt',
   resettokenhash: 'resetTokenHash',
   resettokenexpiresat: 'resetTokenExpiresAt',
+  mustchangepassword: 'mustChangePassword',
   patientid: 'patientId',
   patientname: 'patientName',
   patientemail: 'patientEmail',
@@ -384,6 +385,7 @@ const initializeDatabase = async () => {
           address TEXT,
           resetTokenHash TEXT,
           resetTokenExpiresAt INTEGER,
+          mustChangePassword INTEGER DEFAULT 0,
           createdAt TEXT DEFAULT CURRENT_TIMESTAMP
         );
 
@@ -518,6 +520,14 @@ const initializeDatabase = async () => {
         );
       `);
 
+      try {
+        sqliteDb.exec(`ALTER TABLE users ADD COLUMN mustChangePassword INTEGER DEFAULT 0`);
+      } catch (alterErr) {
+        if (!String(alterErr.message || '').toLowerCase().includes('duplicate column')) {
+          throw alterErr;
+        }
+      }
+
       sqliteDb.prepare(`
         INSERT OR IGNORE INTO doctors (id, fullName, specialty, isActive)
         VALUES (?, ?, ?, 1)
@@ -587,9 +597,12 @@ const initializeDatabase = async () => {
         address TEXT,
         resetTokenHash TEXT,
         resetTokenExpiresAt BIGINT,
+        mustChangePassword INTEGER DEFAULT 0,
         createdAt TIMESTAMPTZ DEFAULT NOW()
       )
     `);
+
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS mustChangePassword INTEGER DEFAULT 0`);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS appointments (

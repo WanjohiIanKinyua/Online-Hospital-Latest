@@ -13,6 +13,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import ChangePassword from './pages/ChangePassword';
 import PatientDashboard from './pages/PatientDashboard';
 import PatientAppointments from './pages/PatientAppointments';
 import PatientChat from './pages/PatientChat';
@@ -51,7 +52,7 @@ const removeStoredAuthItem = (key) => {
 };
 
 const clearStoredAuth = () => {
-  ['token', 'userRole', 'userEmail', 'userId', 'userName', 'loginSuccess'].forEach(removeStoredAuthItem);
+  ['token', 'userRole', 'userEmail', 'userId', 'userName', 'loginSuccess', 'mustChangePassword'].forEach(removeStoredAuthItem);
 };
 
 const getLatestAppointment = (appointments = []) => {
@@ -514,7 +515,13 @@ function App() {
   const hasStoredAuth = Boolean(getStoredAuthItem('token') && ['patient', 'admin'].includes(storedRole));
   const effectiveIsAuthenticated = isAuthenticated || hasStoredAuth;
   const effectiveUserRole = userRole || (hasStoredAuth ? storedRole : null);
-  const defaultDashboardPath = effectiveUserRole === 'admin' ? '/admin' : '/dashboard';
+  const effectiveMustChangePassword = (
+    effectiveUserRole === 'patient' &&
+    ['1', 'true'].includes(String(getStoredAuthItem('mustChangePassword') || '').toLowerCase())
+  );
+  const defaultDashboardPath = effectiveMustChangePassword
+    ? '/change-password'
+    : effectiveUserRole === 'admin' ? '/admin' : '/dashboard';
 
   return (
     <Router>
@@ -540,17 +547,25 @@ function App() {
             <Route path="/login" element={<Navigate to={defaultDashboardPath} replace />} />
             <Route path="/register" element={<Navigate to={defaultDashboardPath} replace />} />
             {effectiveUserRole === 'patient' && (
-              <>
-                <Route path="/dashboard" element={<PatientDashboard />} />
-                <Route path="/book-appointment" element={<BookAppointment />} />
-                <Route path="/appointments" element={<PatientAppointments />} />
-                <Route path="/chat" element={<PatientChat />} />
-                <Route path="/profile" element={<PatientProfile />} />
-                <Route path="/consultation/:appointmentId" element={<Consultation />} />
-                <Route path="/payment/:appointmentId" element={<PaymentPage />} />
-                <Route path="/prescriptions" element={<Prescriptions />} />
-                <Route path="*" element={<Navigate to="/dashboard" />} />
-              </>
+              effectiveMustChangePassword ? (
+                <>
+                  <Route path="/change-password" element={<ChangePassword />} />
+                  <Route path="*" element={<Navigate to="/change-password" replace />} />
+                </>
+              ) : (
+                <>
+                  <Route path="/change-password" element={<ChangePassword />} />
+                  <Route path="/dashboard" element={<PatientDashboard />} />
+                  <Route path="/book-appointment" element={<BookAppointment />} />
+                  <Route path="/appointments" element={<PatientAppointments />} />
+                  <Route path="/chat" element={<PatientChat />} />
+                  <Route path="/profile" element={<PatientProfile />} />
+                  <Route path="/consultation/:appointmentId" element={<Consultation />} />
+                  <Route path="/payment/:appointmentId" element={<PaymentPage />} />
+                  <Route path="/prescriptions" element={<Prescriptions />} />
+                  <Route path="*" element={<Navigate to="/dashboard" />} />
+                </>
+              )
             )}
             {effectiveUserRole === 'admin' && (
               <>

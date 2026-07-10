@@ -118,14 +118,15 @@ exports.login = (req, res) => {
         id: user.id, 
         fullName: user.fullName, 
         email: user.email, 
-        role: user.role 
+        role: user.role,
+        mustChangePassword: Boolean(Number(user.mustChangePassword || 0))
       } 
     });
   });
 };
 
 exports.getProfile = (req, res) => {
-  db.get('SELECT id, fullName, email, phone, dateOfBirth, gender, address, createdAt FROM users WHERE id = ?', [req.user.id], (err, user) => {
+  db.get('SELECT id, fullName, email, phone, dateOfBirth, gender, address, mustChangePassword, createdAt FROM users WHERE id = ?', [req.user.id], (err, user) => {
     if (err) {
       return res.status(500).json({ error: 'Failed to fetch profile' });
     }
@@ -136,6 +137,39 @@ exports.getProfile = (req, res) => {
 
     res.status(200).json(user);
   });
+};
+
+exports.changePassword = (req, res) => {
+  const { newPassword, confirmPassword } = req.body;
+  const normalizedPassword = String(newPassword || '');
+
+  if (!normalizedPassword || !confirmPassword) {
+    return res.status(400).json({ error: 'New password and confirmation are required' });
+  }
+
+  if (normalizedPassword !== confirmPassword) {
+    return res.status(400).json({ error: 'Passwords do not match' });
+  }
+
+  if (!PASSWORD_POLICY_REGEX.test(normalizedPassword)) {
+    return res.status(400).json({
+      error: 'Password must be at least 6 characters and include at least 1 uppercase letter, 1 number, and 1 special character'
+    });
+  }
+
+  const hashedPassword = bcrypt.hashSync(normalizedPassword, 10);
+  db.run(
+    `UPDATE users
+     SET password = ?, mustChangePassword = 0, resetTokenHash = NULL, resetTokenExpiresAt = NULL
+     WHERE id = ?`,
+    [hashedPassword, req.user.id],
+    (err) => {
+      if (err) {
+        return res.status(500).json({ error: 'Failed to update password' });
+      }
+      return res.status(200).json({ message: 'Password updated successfully' });
+    }
+  );
 };
 
 exports.updateProfile = (req, res) => {
@@ -243,8 +277,8 @@ exports.resetPassword = (req, res) => {
       const hashedPassword = bcrypt.hashSync(newPassword, 10);
 
       db.run(
-        `UPDATE users
-         SET password = ?, resetTokenHash = NULL, resetTokenExpiresAt = NULL
+      `UPDATE users
+         SET password = ?, resetTokenHash = NULL, resetTokenExpiresAt = NULL, mustChangePassword = 0
          WHERE id = ?`,
         [hashedPassword, user.id],
         (updateErr) => {

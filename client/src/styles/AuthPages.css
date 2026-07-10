@@ -163,6 +163,21 @@
   text-decoration: underline;
 }
 
+.auth-link-button {
+  border: none;
+  background: transparent;
+  color: #0066cc;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 0;
+}
+
+.auth-link-button:hover {
+  color: #0052a3;
+  text-decoration: underline;
+}
+
 .auth-note {
   margin-top: 12px;
   background: #f8fafc;
@@ -254,4 +269,3 @@
   font-size: 14px;
   line-height: 1.35;
 }
-

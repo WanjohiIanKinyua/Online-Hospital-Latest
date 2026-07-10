@@ -382,8 +382,8 @@ exports.createPatient = (req, res) => {
   const hashedPassword = bcrypt.hashSync(password, 10);
 
   db.run(
-    `INSERT INTO users (id, fullName, email, password, phone, role, dateOfBirth, gender, address)
-     VALUES (?, ?, ?, ?, ?, 'patient', ?, ?, ?)`,
+    `INSERT INTO users (id, fullName, email, password, phone, role, dateOfBirth, gender, address, mustChangePassword)
+     VALUES (?, ?, ?, ?, ?, 'patient', ?, ?, ?, 1)`,
     [
       patientId,
       fullName.trim(),
@@ -701,7 +701,7 @@ exports.updatePatient = (req, res) => {
     const hashedPassword = bcrypt.hashSync(password.trim(), 10);
     db.run(
       `UPDATE users
-       SET fullName = ?, email = ?, password = ?, phone = ?, dateOfBirth = ?, gender = ?, address = ?
+       SET fullName = ?, email = ?, password = ?, phone = ?, dateOfBirth = ?, gender = ?, address = ?, mustChangePassword = 1
        WHERE id = ? AND role = 'patient'`,
       [fullName.trim(), normalizedEmail, hashedPassword, phone || null, dateOfBirth || null, gender || null, address || null, patientId],
       function onUpdatedWithPassword(err) {

@@ -41,12 +41,15 @@ function Login({ setIsAuthenticated, setUserRole }) {
       const resolvedName = response.data.user.fullName || response.data.user.fullname || response.data.user.name || '';
       saveAuthItem('userName', resolvedName);
       saveAuthItem('userEmail', response.data.user.email);
+      saveAuthItem('mustChangePassword', response.data.user.mustChangePassword ? '1' : '0');
       saveAuthItem('loginSuccess', '1');
 
       setIsAuthenticated(true);
       setUserRole(role);
 
-      window.location.replace(role === 'admin' ? '/admin' : '/dashboard');
+      window.location.replace(
+        role === 'patient' && response.data.user.mustChangePassword ? '/change-password' : role === 'admin' ? '/admin' : '/dashboard'
+      );
     } catch (err) {
       setError(err.response?.data?.error || err.message || 'Login failed. Please try again.');
     } finally {

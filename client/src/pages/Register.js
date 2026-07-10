@@ -73,6 +73,7 @@ function Register({ setIsAuthenticated, setUserRole }) {
       saveAuthItem('userId', response.data.userId);
       saveAuthItem('userName', formData.fullName);
       saveAuthItem('userEmail', formData.email);
+      saveAuthItem('mustChangePassword', '0');
 
       setIsAuthenticated(true);
       setUserRole('patient');
