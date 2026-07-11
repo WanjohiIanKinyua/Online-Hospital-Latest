@@ -10,6 +10,11 @@ const saveAuthItem = (key, value) => {
   localStorage.setItem(key, value);
   sessionStorage.setItem(key, value);
 };
+const LAST_ACTIVITY_STORAGE_KEY = 'eliteLastActivityAt';
+
+const refreshSessionActivity = () => {
+  localStorage.setItem(LAST_ACTIVITY_STORAGE_KEY, String(Date.now()));
+};
 
 function Login({ setIsAuthenticated, setUserRole }) {
   const [email, setEmail] = useState('');
@@ -43,6 +48,7 @@ function Login({ setIsAuthenticated, setUserRole }) {
       saveAuthItem('userEmail', response.data.user.email);
       saveAuthItem('mustChangePassword', response.data.user.mustChangePassword ? '1' : '0');
       saveAuthItem('loginSuccess', '1');
+      refreshSessionActivity();
 
       setIsAuthenticated(true);
       setUserRole(role);

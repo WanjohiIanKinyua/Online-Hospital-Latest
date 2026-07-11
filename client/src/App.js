@@ -52,7 +52,16 @@ const removeStoredAuthItem = (key) => {
 };
 
 const clearStoredAuth = () => {
-  ['token', 'userRole', 'userEmail', 'userId', 'userName', 'loginSuccess', 'mustChangePassword'].forEach(removeStoredAuthItem);
+  [
+    'token',
+    'userRole',
+    'userEmail',
+    'userId',
+    'userName',
+    'loginSuccess',
+    'mustChangePassword',
+    LAST_ACTIVITY_STORAGE_KEY
+  ].forEach(removeStoredAuthItem);
 };
 
 const getLatestAppointment = (appointments = []) => {

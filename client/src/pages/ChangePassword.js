@@ -6,7 +6,8 @@ import '../styles/AuthPages.css';
 import { API_BASE_URL } from '../config/api';
 
 const PASSWORD_POLICY_REGEX = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{6,}$/;
-const AUTH_KEYS = ['token', 'userRole', 'userEmail', 'userId', 'userName', 'loginSuccess', 'mustChangePassword'];
+const LAST_ACTIVITY_STORAGE_KEY = 'eliteLastActivityAt';
+const AUTH_KEYS = ['token', 'userRole', 'userEmail', 'userId', 'userName', 'loginSuccess', 'mustChangePassword', LAST_ACTIVITY_STORAGE_KEY];
 
 function ChangePassword() {
   const navigate = useNavigate();
@@ -53,6 +54,7 @@ function ChangePassword() {
 
       localStorage.setItem('mustChangePassword', '0');
       sessionStorage.setItem('mustChangePassword', '0');
+      localStorage.setItem(LAST_ACTIVITY_STORAGE_KEY, String(Date.now()));
       window.dispatchEvent(new Event('storage'));
       setMessage(response.data?.message || 'Password updated successfully. Redirecting to dashboard...');
       setTimeout(() => navigate('/dashboard', { replace: true }), 1000);

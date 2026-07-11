@@ -221,7 +221,7 @@ export function DashboardLayout({ children, role = 'patient' }) {
   }, [role, token]);
 
   const handleLogout = () => {
-    ['token', 'userRole', 'userEmail', 'userId', 'userName', 'loginSuccess', 'mustChangePassword'].forEach((key) => {
+    ['token', 'userRole', 'userEmail', 'userId', 'userName', 'loginSuccess', 'mustChangePassword', 'eliteLastActivityAt'].forEach((key) => {
       localStorage.removeItem(key);
       sessionStorage.removeItem(key);
     });
