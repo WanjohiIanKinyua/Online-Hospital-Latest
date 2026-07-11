@@ -3,6 +3,7 @@ import axios from 'axios';
 import DashboardLayout from '../../components/DashboardLayout';
 import '../../styles/ModernDashboard.css';
 import '../../styles/AdminManagement.css';
+import { FiFileText } from 'react-icons/fi';
 import { API_BASE_URL } from '../../config/api';
 
 function AdminDoctorNotes() {
@@ -11,8 +12,10 @@ function AdminDoctorNotes() {
 
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState([]);
+  const [appointments, setAppointments] = useState([]);
   const [noteSearch, setNoteSearch] = useState('');
   const [selectedNoteId, setSelectedNoteId] = useState('');
+  const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
 
   const [patientMode, setPatientMode] = useState('existing');
   const [patientQuery, setPatientQuery] = useState('');
@@ -25,11 +28,32 @@ function AdminDoctorNotes() {
     issue: '',
     noteContent: ''
   });
+  const [prescriptionForm, setPrescriptionForm] = useState({
+    appointmentId: '',
+    medications: '',
+    dosageInstructions: '',
+    medicalNotes: '',
+    followUpRecommendations: ''
+  });
 
   const selectedNote = useMemo(
     () => notes.find((note) => note.id === selectedNoteId) || null,
     [notes, selectedNoteId]
   );
+  const activePatientId = selectedNote?.patientId || selectedPatient?.id || null;
+  const patientPrescriptionAppointments = useMemo(() => (
+    appointments.filter((appointment) => (
+      appointment.patientId === activePatientId &&
+      String(appointment.approvalStatus || '').toLowerCase() === 'approved'
+    ))
+  ), [appointments, activePatientId]);
+
+  const formatAppointmentOption = (appointment) => {
+    const dateValue = appointment.appointmentDate || appointment.appointmentdate;
+    const parsed = dateValue ? new Date(dateValue) : null;
+    const dateLabel = parsed && !Number.isNaN(parsed.getTime()) ? parsed.toLocaleDateString() : dateValue || 'No date';
+    return `${dateLabel} ${appointment.appointmentTime || ''}`.trim();
+  };
 
   const loadNotes = useCallback(async (query = '') => {
     try {
@@ -57,9 +81,21 @@ function AdminDoctorNotes() {
     }
   }, [token]);
 
+  const loadAppointments = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/admin/appointments`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAppointments(response.data || []);
+    } catch (error) {
+      setAppointments([]);
+    }
+  }, [token]);
+
   useEffect(() => {
     loadNotes('');
-  }, [loadNotes]);
+    loadAppointments();
+  }, [loadNotes, loadAppointments]);
 
   useEffect(() => {
     if (patientMode !== 'existing') return;
@@ -82,6 +118,7 @@ function AdminDoctorNotes() {
       issue: selectedNote.issue || '',
       noteContent: selectedNote.noteContent || ''
     });
+    setSelectedPatient(null);
     if (editorRef.current) {
       editorRef.current.innerHTML = selectedNote.noteContent || '';
     }
@@ -165,6 +202,72 @@ function AdminDoctorNotes() {
       await loadNotes(noteSearch);
     } catch (error) {
       alert(error.response?.data?.error || 'Failed to save doctor note');
+    }
+  };
+
+  const openPrescriptionModal = () => {
+    if (!selectedNoteId) {
+      alert('Please save the doctor notes first, then issue the prescription.');
+      return;
+    }
+
+    if (!activePatientId) {
+      alert('Prescriptions can only be issued for registered patients with appointments.');
+      return;
+    }
+
+    if (patientPrescriptionAppointments.length === 0) {
+      alert('No approved appointments found for this patient. First approve the patient appointment.');
+      return;
+    }
+
+    setPrescriptionForm({
+      appointmentId: patientPrescriptionAppointments[0].id,
+      medications: '',
+      dosageInstructions: '',
+      medicalNotes: formData.issue || '',
+      followUpRecommendations: ''
+    });
+    setShowPrescriptionModal(true);
+  };
+
+  const handlePrescriptionChange = (e) => {
+    const { name, value } = e.target;
+    setPrescriptionForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const issuePrescription = async () => {
+    if (!prescriptionForm.appointmentId) {
+      alert('Please select an appointment');
+      return;
+    }
+
+    if (!prescriptionForm.medications.trim()) {
+      alert('Please enter medications');
+      return;
+    }
+
+    try {
+      await axios.post(
+        `${API_BASE_URL}/api/prescriptions/issue`,
+        {
+          appointmentId: prescriptionForm.appointmentId,
+          medications: prescriptionForm.medications,
+          dosageInstructions: prescriptionForm.dosageInstructions,
+          medicalNotes: prescriptionForm.medicalNotes,
+          followUpRecommendations: prescriptionForm.followUpRecommendations,
+          doctorName: 'Dr. Merceline'
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      setShowPrescriptionModal(false);
+      await loadAppointments();
+      alert('Prescription issued successfully');
+    } catch (error) {
+      alert(error.response?.data?.error || 'Failed to issue prescription');
     }
   };
 
@@ -329,6 +432,9 @@ function AdminDoctorNotes() {
 
               <div className="doctor-notes-actions">
                 <button type="button" className="btn-cancel" onClick={resetForNewNote}>Clear</button>
+                <button type="button" className="btn-prescription-action" onClick={openPrescriptionModal}>
+                  <FiFileText /> Issue Prescription
+                </button>
                 <button type="button" className="btn-submit" onClick={saveNote}>
                   {selectedNoteId ? 'Update Summary' : 'Save Summary'}
                 </button>
@@ -336,6 +442,89 @@ function AdminDoctorNotes() {
             </div>
           </section>
         </div>
+
+        {showPrescriptionModal && (
+          <div className="modal active">
+            <div className="modal-content">
+              <div className="modal-header">
+                Issue Prescription
+                <span className="modal-close" onClick={() => setShowPrescriptionModal(false)}>&times;</span>
+              </div>
+
+              <form>
+                <div className="form-group">
+                  <label htmlFor="appointmentId">Appointment</label>
+                  <select
+                    id="appointmentId"
+                    name="appointmentId"
+                    value={prescriptionForm.appointmentId}
+                    onChange={handlePrescriptionChange}
+                  >
+                    {patientPrescriptionAppointments.map((appointment) => (
+                      <option key={appointment.id} value={appointment.id}>
+                        {formatAppointmentOption(appointment)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="medications">Medications</label>
+                  <textarea
+                    id="medications"
+                    name="medications"
+                    value={prescriptionForm.medications}
+                    onChange={handlePrescriptionChange}
+                    rows="3"
+                    placeholder="Enter medications"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="dosageInstructions">Dosage Instructions</label>
+                  <textarea
+                    id="dosageInstructions"
+                    name="dosageInstructions"
+                    value={prescriptionForm.dosageInstructions}
+                    onChange={handlePrescriptionChange}
+                    rows="3"
+                    placeholder="Enter dosage instructions"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="medicalNotes">Medical Notes</label>
+                  <textarea
+                    id="medicalNotes"
+                    name="medicalNotes"
+                    value={prescriptionForm.medicalNotes}
+                    onChange={handlePrescriptionChange}
+                    rows="3"
+                    placeholder="Enter medical notes"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="followUpRecommendations">Follow-up Recommendations</label>
+                  <textarea
+                    id="followUpRecommendations"
+                    name="followUpRecommendations"
+                    value={prescriptionForm.followUpRecommendations}
+                    onChange={handlePrescriptionChange}
+                    rows="3"
+                    placeholder="Enter follow-up recommendations"
+                  />
+                </div>
+
+                <div className="modal-actions">
+                  <button type="button" className="btn-cancel" onClick={() => setShowPrescriptionModal(false)}>
+                    Cancel
+                  </button>
+                  <button type="button" className="btn-submit" onClick={issuePrescription}>
+                    Issue Prescription
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

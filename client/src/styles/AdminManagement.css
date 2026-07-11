@@ -353,6 +353,26 @@
   margin-top: 1rem;
 }
 
+.btn-prescription-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: #0d67b1;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.75rem 1rem;
+  transition: all 0.2s ease;
+}
+
+.btn-prescription-action:hover {
+  background: #005196;
+  transform: translateY(-1px);
+}
+
 @media (max-width: 768px) {
   .admin-inline-form {
     grid-template-columns: 1fr;
@@ -372,6 +392,11 @@
 
   .admin-actions {
     flex-wrap: wrap;
+  }
+
+  .doctor-notes-actions {
+    justify-content: stretch;
+    flex-direction: column;
   }
 
   .doctor-notes-layout {

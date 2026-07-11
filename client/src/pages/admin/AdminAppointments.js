@@ -4,21 +4,16 @@ import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
 import '../../styles/ModernDashboard.css';
 import '../../styles/AdminManagement.css';
-import { FiEdit2, FiPlus, FiCheckCircle, FiVideo } from 'react-icons/fi';
+import { FiEdit2, FiCheckCircle, FiVideo } from 'react-icons/fi';
 import { API_BASE_URL } from '../../config/api';
 
 function AdminAppointments() {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [modalType, setModalType] = useState('meeting');
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [formData, setFormData] = useState({
-    meetingLink: '',
-    medications: '',
-    dosageInstructions: '',
-    medicalNotes: '',
-    followUpRecommendations: ''
+    meetingLink: ''
   });
 
   const token = localStorage.getItem('token');
@@ -58,21 +53,8 @@ function AdminAppointments() {
 
   const openMeetingModal = (appointment) => {
     setSelectedAppointment(appointment);
-    setModalType('meeting');
-    setFormData((prev) => ({ ...prev, meetingLink: appointment.meetingLink || '' }));
-    setShowModal(true);
-  };
-
-  const openPrescriptionModal = (appointment) => {
-    if (!requireApprovedAppointment(appointment)) return;
-    setSelectedAppointment(appointment);
-    setModalType('prescription');
     setFormData({
-      meetingLink: '',
-      medications: '',
-      dosageInstructions: '',
-      medicalNotes: '',
-      followUpRecommendations: ''
+      meetingLink: appointment.meetingLink || ''
     });
     setShowModal(true);
   };
@@ -99,36 +81,6 @@ function AdminAppointments() {
       alert('Meeting link saved and shared with patient in chat');
     } catch (error) {
       alert(error.response?.data?.error || 'Failed to save and share meeting link');
-    }
-  };
-
-  const handleIssuePrescription = async () => {
-    if (!requireApprovedAppointment(selectedAppointment)) return;
-    if (!formData.medications.trim()) {
-      alert('Please enter medications');
-      return;
-    }
-
-    try {
-      await axios.post(
-        `${API_BASE_URL}/api/prescriptions/issue`,
-        {
-          appointmentId: selectedAppointment.id,
-          medications: formData.medications,
-          dosageInstructions: formData.dosageInstructions,
-          medicalNotes: formData.medicalNotes,
-          followUpRecommendations: formData.followUpRecommendations,
-          doctorName: 'Dr. Merceline'
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
-
-      setShowModal(false);
-      alert('Prescription issued successfully');
-    } catch (error) {
-      alert(error.response?.data?.error || 'Failed to issue prescription');
     }
   };
 
@@ -173,7 +125,7 @@ function AdminAppointments() {
         <div className="dashboard-header">
           <div className="header-text">
             <h1 className="dashboard-title">Recent Bookings</h1>
-            <p className="dashboard-subtitle">Manage recent bookings, meeting links, status, and prescriptions</p>
+            <p className="dashboard-subtitle">Manage recent bookings, meeting links, and appointment status</p>
           </div>
         </div>
 
@@ -237,9 +189,6 @@ function AdminAppointments() {
                             <button className="btn-small" onClick={() => openMeetingModal(apt)} title="Add/Edit meeting link">
                               <FiEdit2 size={14} />
                             </button>
-                            <button className="btn-small" onClick={() => openPrescriptionModal(apt)} title="Issue prescription">
-                              <FiPlus size={14} />
-                            </button>
                             {apt.status !== 'completed' && (
                               <button
                                 className="btn-small btn-success"
@@ -271,73 +220,22 @@ function AdminAppointments() {
           <div className="modal active">
             <div className="modal-content">
               <div className="modal-header">
-                {modalType === 'meeting' ? 'Add Meeting Link' : 'Issue Prescription'}
+                Add Meeting Link
                 <span className="modal-close" onClick={() => setShowModal(false)}>&times;</span>
               </div>
 
               <form>
-                {modalType === 'meeting' && (
-                  <div className="form-group">
-                    <label htmlFor="meetingLink">Meeting Link</label>
-                    <input
-                      type="url"
-                      id="meetingLink"
-                      name="meetingLink"
-                      value={formData.meetingLink}
-                      onChange={handleFormChange}
-                      placeholder="Paste Google Meet or Zoom link"
-                    />
-                  </div>
-                )}
-
-                {modalType === 'prescription' && (
-                  <>
-                    <div className="form-group">
-                      <label htmlFor="medications">Medications</label>
-                      <textarea
-                        id="medications"
-                        name="medications"
-                        value={formData.medications}
-                        onChange={handleFormChange}
-                        rows="3"
-                        placeholder="Enter medications"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="dosageInstructions">Dosage Instructions</label>
-                      <textarea
-                        id="dosageInstructions"
-                        name="dosageInstructions"
-                        value={formData.dosageInstructions}
-                        onChange={handleFormChange}
-                        rows="3"
-                        placeholder="Enter dosage instructions"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="medicalNotes">Medical Notes</label>
-                      <textarea
-                        id="medicalNotes"
-                        name="medicalNotes"
-                        value={formData.medicalNotes}
-                        onChange={handleFormChange}
-                        rows="3"
-                        placeholder="Enter medical notes"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="followUpRecommendations">Follow-up Recommendations</label>
-                      <textarea
-                        id="followUpRecommendations"
-                        name="followUpRecommendations"
-                        value={formData.followUpRecommendations}
-                        onChange={handleFormChange}
-                        rows="3"
-                        placeholder="Enter follow-up recommendations"
-                      />
-                    </div>
-                  </>
-                )}
+                <div className="form-group">
+                  <label htmlFor="meetingLink">Meeting Link</label>
+                  <input
+                    type="url"
+                    id="meetingLink"
+                    name="meetingLink"
+                    value={formData.meetingLink}
+                    onChange={handleFormChange}
+                    placeholder="Paste Google Meet or Zoom link"
+                  />
+                </div>
 
                 <div className="modal-actions">
                   <button type="button" className="btn-cancel" onClick={() => setShowModal(false)}>
@@ -346,9 +244,9 @@ function AdminAppointments() {
                   <button
                     type="button"
                     className="btn-submit"
-                    onClick={modalType === 'meeting' ? handleAddMeetingLink : handleIssuePrescription}
+                    onClick={handleAddMeetingLink}
                   >
-                    {modalType === 'meeting' ? 'Save & Share' : 'Issue Prescription'}
+                    Save & Share
                   </button>
                 </div>
               </form>
