@@ -181,6 +181,10 @@ const keyMap = {
   mutedbyadmin: 'mutedByAdmin',
   lastseenat: 'lastSeenAt',
   joinedat: 'joinedAt',
+  uploadid: 'uploadId',
+  filename: 'fileName',
+  mimetype: 'mimeType',
+  imagedata: 'imageData',
   fromclientid: 'fromClientId',
   toclientid: 'toClientId',
   deliveredat: 'deliveredAt'
@@ -493,6 +497,17 @@ const initializeDatabase = async () => {
           updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
         );
 
+        CREATE TABLE IF NOT EXISTS test_uploads (
+          id TEXT PRIMARY KEY,
+          patientId TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          title TEXT,
+          note TEXT,
+          fileName TEXT,
+          mimeType TEXT,
+          imageData TEXT NOT NULL,
+          createdAt TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+
         CREATE TABLE IF NOT EXISTS meeting_participants (
           id TEXT PRIMARY KEY,
           roomId TEXT NOT NULL,
@@ -729,6 +744,19 @@ const initializeDatabase = async () => {
         noteContent TEXT,
         createdAt TIMESTAMPTZ DEFAULT NOW(),
         updatedAt TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS test_uploads (
+        id TEXT PRIMARY KEY,
+        patientId TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        title TEXT,
+        note TEXT,
+        fileName TEXT,
+        mimeType TEXT,
+        imageData TEXT NOT NULL,
+        createdAt TIMESTAMPTZ DEFAULT NOW()
       )
     `);
 

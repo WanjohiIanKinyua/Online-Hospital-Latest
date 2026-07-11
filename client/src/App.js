@@ -18,6 +18,7 @@ import PatientDashboard from './pages/PatientDashboard';
 import PatientAppointments from './pages/PatientAppointments';
 import PatientChat from './pages/PatientChat';
 import PatientProfile from './pages/PatientProfile';
+import PatientUploads from './pages/PatientUploads';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminAppointments from './pages/admin/AdminAppointments';
 import AdminPatients from './pages/admin/AdminPatients';
@@ -27,6 +28,7 @@ import AdminBookAppointment from './pages/admin/AdminBookAppointment';
 import AdminDoctors from './pages/admin/AdminDoctors';
 import AdminChat from './pages/admin/AdminChat';
 import AdminDoctorNotes from './pages/admin/AdminDoctorNotes';
+import AdminUploads from './pages/admin/AdminUploads';
 import BookAppointment from './pages/BookAppointment';
 import Consultation from './pages/Consultation';
 import PaymentPage from './pages/PaymentPage';
@@ -568,6 +570,7 @@ function App() {
                   <Route path="/book-appointment" element={<BookAppointment />} />
                   <Route path="/appointments" element={<PatientAppointments />} />
                   <Route path="/chat" element={<PatientChat />} />
+                  <Route path="/uploads" element={<PatientUploads />} />
                   <Route path="/profile" element={<PatientProfile />} />
                   <Route path="/consultation/:appointmentId" element={<Consultation />} />
                   <Route path="/payment/:appointmentId" element={<PaymentPage />} />
@@ -584,6 +587,7 @@ function App() {
                 <Route path="/admin/book-for-patient" element={<AdminBookAppointment />} />
                 <Route path="/admin/doctors" element={<AdminDoctors />} />
                 <Route path="/admin/chat" element={<AdminChat />} />
+                <Route path="/admin/uploads" element={<AdminUploads />} />
                 <Route path="/admin/doctor-notes" element={<AdminDoctorNotes />} />
                 <Route path="/admin/appointments" element={<AdminAppointments />} />
                 <Route path="/admin/patients" element={<AdminPatients />} />

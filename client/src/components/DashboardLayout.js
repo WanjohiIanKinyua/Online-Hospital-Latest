@@ -19,7 +19,9 @@ import {
   FiMenu,
   FiX,
   FiMoon,
-  FiSun
+  FiSun,
+  FiUpload,
+  FiImage
 } from 'react-icons/fi';
 import '../styles/DashboardLayout.css';
 import { API_BASE_URL } from '../config/api';
@@ -64,6 +66,7 @@ export function DashboardLayout({ children, role = 'patient' }) {
       label: 'Chat Room',
       showUnreadBadge: true
     },
+    { to: '/uploads', icon: FiUpload, label: 'Upload Results' },
     { to: '/prescriptions', icon: FiFileText, label: 'Prescriptions' },
     { to: '/profile', icon: FiSettings, label: 'My Profile' }
   ];
@@ -82,6 +85,7 @@ export function DashboardLayout({ children, role = 'patient' }) {
       label: 'Chat Room',
       showUnreadBadge: true
     },
+    { to: '/admin/uploads', icon: FiImage, label: 'View Uploads' },
     { to: '/admin/patients', icon: FiUsers, label: 'Patients' }
   ];
 

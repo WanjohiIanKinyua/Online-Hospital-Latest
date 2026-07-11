@@ -85,17 +85,21 @@ exports.getPrescriptionById = (req, res) => {
 exports.getPrescriptionByAppointment = (req, res) => {
   const { appointmentId } = req.params;
 
-  db.get('SELECT * FROM prescriptions WHERE appointmentId = ?', [appointmentId], (err, prescription) => {
-    if (err) {
-      return res.status(500).json({ error: 'Failed to fetch prescription' });
-    }
+  db.get(
+    'SELECT * FROM prescriptions WHERE appointmentId = ? ORDER BY issuedAt DESC LIMIT 1',
+    [appointmentId],
+    (err, prescription) => {
+      if (err) {
+        return res.status(500).json({ error: 'Failed to fetch prescription' });
+      }
 
-    if (!prescription) {
-      return res.status(404).json({ error: 'No prescription found for this appointment' });
-    }
+      if (!prescription) {
+        return res.status(404).json({ error: 'No prescription found for this appointment' });
+      }
 
-    res.status(200).json(prescription);
-  });
+      res.status(200).json(prescription);
+    }
+  );
 };
 
 exports.getAllPrescriptions = (req, res) => {

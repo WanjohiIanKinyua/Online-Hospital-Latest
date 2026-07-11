@@ -6,6 +6,14 @@ import '../../styles/AdminManagement.css';
 import { FiFileText } from 'react-icons/fi';
 import { API_BASE_URL } from '../../config/api';
 
+const getAppointmentTimestamp = (appointment) => {
+  const dateValue = appointment.appointmentDate || appointment.appointmentdate || '';
+  const timeValue = appointment.appointmentTime || appointment.appointmenttime || '';
+  const parsed = new Date(`${dateValue} ${timeValue}`.trim());
+  if (!Number.isNaN(parsed.getTime())) return parsed.getTime();
+  return new Date(appointment.createdAt || appointment.createdat || 0).getTime();
+};
+
 function AdminDoctorNotes() {
   const token = localStorage.getItem('token');
   const editorRef = useRef(null);
@@ -45,14 +53,15 @@ function AdminDoctorNotes() {
     appointments.filter((appointment) => (
       appointment.patientId === activePatientId &&
       String(appointment.approvalStatus || '').toLowerCase() === 'approved'
-    ))
+    )).sort((a, b) => getAppointmentTimestamp(b) - getAppointmentTimestamp(a))
   ), [appointments, activePatientId]);
 
   const formatAppointmentOption = (appointment) => {
     const dateValue = appointment.appointmentDate || appointment.appointmentdate;
     const parsed = dateValue ? new Date(dateValue) : null;
     const dateLabel = parsed && !Number.isNaN(parsed.getTime()) ? parsed.toLocaleDateString() : dateValue || 'No date';
-    return `${dateLabel} ${appointment.appointmentTime || ''}`.trim();
+    const statusLabel = appointment.status ? ` - ${appointment.status}` : '';
+    return `${dateLabel} ${appointment.appointmentTime || ''}${statusLabel}`.trim();
   };
 
   const loadNotes = useCallback(async (query = '') => {
@@ -452,6 +461,9 @@ function AdminDoctorNotes() {
               </div>
 
               <form>
+                <p className="text-muted">
+                  Select the appointment this prescription belongs to. You can issue another prescription from the same saved notes when needed.
+                </p>
                 <div className="form-group">
                   <label htmlFor="appointmentId">Appointment</label>
                   <select
