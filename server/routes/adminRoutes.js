@@ -23,6 +23,7 @@ router.delete('/patients/:patientId', adminController.deletePatient);
 router.get('/availability', adminController.getAvailabilitySlots);
 router.post('/availability', adminController.createAvailabilitySlot);
 router.post('/availability/bulk', adminController.createAvailabilityBulkSlots);
+router.delete('/availability/all', adminController.deleteAllAvailabilitySlots);
 router.delete('/availability/:slotId', adminController.deleteAvailabilitySlot);
 router.put('/appointment-status', adminController.updateAppointmentStatus);
 router.post('/meeting-link', adminController.addMeetingLink);

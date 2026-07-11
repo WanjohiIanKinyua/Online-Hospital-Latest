@@ -106,6 +106,23 @@ function AdminSchedule() {
     }
   };
 
+  const clearAllAvailabilitySlots = async () => {
+    const confirmed = await window.confirm(
+      'Clear all availability slots? Slots already tied to active appointments will be kept.'
+    );
+    if (!confirmed) return;
+
+    try {
+      const response = await axios.delete(`${API_BASE_URL}/api/admin/availability/all`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      await loadSlots();
+      alert(`${response.data.deleted || 0} slots cleared. ${response.data.retained || 0} appointment slots kept.`);
+    } catch (error) {
+      alert(error.response?.data?.error || 'Failed to clear slots');
+    }
+  };
+
   const today = new Date().toISOString().split('T')[0];
 
   if (loading) {
@@ -122,7 +139,7 @@ function AdminSchedule() {
         <div className="dashboard-header">
           <div className="header-text">
             <h1 className="dashboard-title">Schedule</h1>
-            <p className="dashboard-subtitle">Set single slots, full-day, or full-week availability windows</p>
+            <p className="dashboard-subtitle">Set single slots, full-day, full-week, or full-month availability windows</p>
           </div>
         </div>
 
@@ -151,7 +168,7 @@ function AdminSchedule() {
 
         <div className="card">
           <div className="card-header">
-            <h2 className="card-title">Add Whole Day / Whole Week</h2>
+            <h2 className="card-title">Add Whole Day / Whole Week / Whole Month</h2>
           </div>
           <div className="card-content">
             <form onSubmit={addBulkAvailability}>
@@ -161,6 +178,7 @@ function AdminSchedule() {
                   <select id="mode" name="mode" value={bulkForm.mode} onChange={handleBulkChange}>
                     <option value="day">Whole Day</option>
                     <option value="week">Whole Week</option>
+                    <option value="month">Whole Month</option>
                   </select>
                 </div>
 
@@ -205,6 +223,11 @@ function AdminSchedule() {
         <div className="card">
           <div className="card-header">
             <h2 className="card-title">Current Availability</h2>
+            {availabilitySlots.length > 0 && (
+              <button type="button" className="btn-clear-slots" onClick={clearAllAvailabilitySlots}>
+                <FiTrash2 /> Clear All Slots
+              </button>
+            )}
           </div>
           <div className="card-content">
             {availabilitySlots.length === 0 ? (

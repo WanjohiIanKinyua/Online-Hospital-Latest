@@ -44,6 +44,12 @@ const addDays = (dateString, offset) => {
   return date.toISOString().split('T')[0];
 };
 
+const getBulkModeDays = (mode) => {
+  if (mode === 'week') return 7;
+  if (mode === 'month') return 30;
+  return 1;
+};
+
 exports.getDashboardStats = (req, res) => {
   let stats = {
     totalPatients: 0,
@@ -171,8 +177,8 @@ exports.createAvailabilityBulkSlots = (req, res) => {
     return res.status(400).json({ error: 'Mode and start date are required' });
   }
 
-  if (!['day', 'week'].includes(mode)) {
-    return res.status(400).json({ error: 'Mode must be day or week' });
+  if (!['day', 'week', 'month'].includes(mode)) {
+    return res.status(400).json({ error: 'Mode must be day, week, or month' });
   }
 
   const start = toMinutes(startTime);
@@ -191,7 +197,7 @@ exports.createAvailabilityBulkSlots = (req, res) => {
     return res.status(400).json({ error: 'Interval must be between 15 and 240 minutes' });
   }
 
-  const days = mode === 'week' ? 7 : 1;
+  const days = getBulkModeDays(mode);
   const slots = [];
 
   for (let dayIndex = 0; dayIndex < days; dayIndex += 1) {
@@ -244,6 +250,49 @@ exports.createAvailabilityBulkSlots = (req, res) => {
       });
     });
   });
+};
+
+exports.deleteAllAvailabilitySlots = (req, res) => {
+  db.get(
+    `
+      SELECT COUNT(*) as count
+      FROM availability_slots s
+      WHERE EXISTS (
+        SELECT 1 FROM appointments a
+        WHERE a.appointmentDate = s.slotDate
+          AND a.appointmentTime = s.slotTime
+          AND a.status != 'cancelled'
+      )
+    `,
+    (countErr, retainedRow) => {
+      if (countErr) {
+        return res.status(500).json({ error: 'Failed to validate slot usage' });
+      }
+
+      db.run(
+        `
+          DELETE FROM availability_slots
+          WHERE NOT EXISTS (
+            SELECT 1 FROM appointments a
+            WHERE a.appointmentDate = availability_slots.slotDate
+              AND a.appointmentTime = availability_slots.slotTime
+              AND a.status != 'cancelled'
+          )
+        `,
+        function onDeleted(deleteErr) {
+          if (deleteErr) {
+            return res.status(500).json({ error: 'Failed to clear availability slots' });
+          }
+
+          return res.status(200).json({
+            message: 'Availability slots cleared successfully',
+            deleted: this.changes || 0,
+            retained: retainedRow?.count || 0
+          });
+        }
+      );
+    }
+  );
 };
 
 exports.deleteAvailabilitySlot = (req, res) => {
