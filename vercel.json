@@ -2,6 +2,19 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "client/build",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.eliteonlinehospital.com"
+        }
+      ],
+      "destination": "https://eliteonlinehospital.com/:path*",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/:path*",
