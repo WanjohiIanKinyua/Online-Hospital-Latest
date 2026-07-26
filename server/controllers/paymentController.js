@@ -109,6 +109,7 @@ exports.getAllPayments = (req, res) => {
     `SELECT p.*, u.fullName, a.appointmentDate FROM payments p 
      JOIN users u ON p.patientId = u.id 
      JOIN appointments a ON p.appointmentId = a.id 
+     WHERE a.approvalStatus = 'approved'
      ORDER BY p.paymentDate DESC`,
     (err, payments) => {
       if (err) {

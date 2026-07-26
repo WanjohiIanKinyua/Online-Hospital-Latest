@@ -404,7 +404,7 @@ const initializeDatabase = async () => {
           approvalReason TEXT,
           meetingLink TEXT,
           paymentStatus TEXT DEFAULT 'pending',
-          consultationFee INTEGER DEFAULT 1000,
+          consultationFee INTEGER,
           createdAt TEXT DEFAULT CURRENT_TIMESTAMP
         );
 
@@ -631,14 +631,15 @@ const initializeDatabase = async () => {
         approvalReason TEXT,
         meetingLink TEXT,
         paymentStatus TEXT DEFAULT 'pending',
-        consultationFee INTEGER DEFAULT 1000,
+        consultationFee INTEGER,
         createdAt TIMESTAMPTZ DEFAULT NOW()
       )
     `);
 
-    // Keep consultation fee consistent for existing and future records.
-    await pool.query(`ALTER TABLE appointments ALTER COLUMN consultationFee SET DEFAULT 1000`);
-    await pool.query(`UPDATE appointments SET consultationFee = 1000 WHERE consultationFee IS NULL OR consultationFee = 500`);
+    // Fees are assigned only after admin approval, never while a booking is still pending.
+    await pool.query(`ALTER TABLE appointments ALTER COLUMN consultationFee DROP DEFAULT`);
+    await pool.query(`UPDATE appointments SET consultationFee = NULL WHERE approvalStatus != 'approved'`);
+    await pool.query(`UPDATE appointments SET consultationFee = 1000 WHERE approvalStatus = 'approved' AND consultationFee IS NULL`);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS doctors (

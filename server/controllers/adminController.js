@@ -79,21 +79,38 @@ exports.getDashboardStats = (req, res) => {
     if (!err) stats.pendingAppointments = row.count;
   });
 
-  // Get total revenue
-  db.get('SELECT SUM(amount) as total FROM payments WHERE status = ?', ['completed'], (err, row) => {
-    if (!err) stats.totalRevenue = row.total || 0;
+  // Get total revenue from approved appointments only.
+  db.get(
+    `
+      SELECT SUM(p.amount) as total
+      FROM payments p
+      JOIN appointments a ON p.appointmentId = a.id
+      WHERE p.status = ?
+      AND a.approvalStatus = 'approved'
+    `,
+    ['completed'],
+    (err, row) => {
+      if (!err) stats.totalRevenue = row.total || 0;
 
-    setTimeout(() => {
-      res.status(200).json(stats);
-    }, 100);
-  });
+      setTimeout(() => {
+        res.status(200).json(stats);
+      }, 100);
+    }
+  );
 };
 
 exports.getAllAppointments = (req, res) => {
   db.all(
-    `SELECT a.*, u.fullName, u.email FROM appointments a 
+    `
+     SELECT
+       a.*,
+       CASE WHEN a.approvalStatus = 'approved' THEN COALESCE(a.consultationFee, 1000) ELSE NULL END as consultationFee,
+       u.fullName,
+       u.email
+     FROM appointments a
      JOIN users u ON a.patientId = u.id 
-     ORDER BY a.createdAt DESC, a.appointmentDate DESC, a.appointmentTime DESC`,
+     ORDER BY a.createdAt DESC, a.appointmentDate DESC, a.appointmentTime DESC
+    `,
     (err, appointments) => {
       if (err) {
         return res.status(500).json({ error: 'Failed to fetch appointments' });
@@ -384,8 +401,10 @@ exports.getDetailedReport = (req, res) => {
   const { startDate, endDate } = req.query;
 
   let query = `
-    SELECT a.id, a.appointmentDate, a.appointmentTime, a.status, 
-           u.fullName, u.email, p.amount, p.status as paymentStatus
+    SELECT a.id, a.appointmentDate, a.appointmentTime, a.status,
+           u.fullName, u.email,
+           CASE WHEN a.approvalStatus = 'approved' THEN p.amount ELSE NULL END as amount,
+           p.status as paymentStatus
     FROM appointments a
     JOIN users u ON a.patientId = u.id
     LEFT JOIN payments p ON a.id = p.appointmentId
@@ -511,7 +530,8 @@ exports.updateAppointmentApproval = (req, res) => {
                 UPDATE appointments
                 SET approvalStatus = 'approved',
                     approvalReason = NULL,
-                    status = 'confirmed'
+                    status = 'confirmed',
+                    consultationFee = 1000
                 WHERE id = ?
               `,
               [appointmentId],
@@ -530,7 +550,8 @@ exports.updateAppointmentApproval = (req, res) => {
             UPDATE appointments
             SET approvalStatus = 'rejected',
                 approvalReason = ?,
-                status = 'cancelled'
+                status = 'cancelled',
+                consultationFee = NULL
             WHERE id = ?
           `,
           [reason.trim(), appointmentId],
@@ -597,8 +618,8 @@ exports.bookAppointmentForPatient = (req, res) => {
             db.run(
               `
                 INSERT INTO appointments
-                (id, patientId, doctorName, appointmentDate, appointmentTime, status, approvalStatus, paymentStatus)
-                VALUES (?, ?, ?, ?, ?, 'confirmed', 'approved', 'pending')
+                (id, patientId, doctorName, appointmentDate, appointmentTime, status, approvalStatus, paymentStatus, consultationFee)
+                VALUES (?, ?, ?, ?, ?, 'confirmed', 'approved', 'pending', 1000)
               `,
               [appointmentId, patientId, doctorName || 'Dr. Merceline', appointmentDate, appointmentTime],
               (insertErr) => {

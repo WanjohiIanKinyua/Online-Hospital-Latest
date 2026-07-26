@@ -125,9 +125,9 @@ exports.bookAppointment = (req, res) => {
           }
 
           db.run(
-            `INSERT INTO appointments (id, patientId, appointmentDate, appointmentTime, doctorName, status, approvalStatus, paymentStatus) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [appointmentId, patientId, appointmentDate, appointmentTime, doctorName || 'Dr. Merceline', 'pending', 'pending', 'pending'],
+            `INSERT INTO appointments (id, patientId, appointmentDate, appointmentTime, doctorName, status, approvalStatus, paymentStatus, consultationFee) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [appointmentId, patientId, appointmentDate, appointmentTime, doctorName || 'Dr. Merceline', 'pending', 'pending', 'pending', null],
             (insertErr) => {
               if (insertErr) {
                 return res.status(500).json({ error: 'Failed to book appointment' });
@@ -214,7 +214,8 @@ exports.rescheduleAppointment = (req, res) => {
                       appointmentTime = ?,
                       approvalStatus = 'pending',
                       approvalReason = NULL,
-                      status = 'pending'
+                      status = 'pending',
+                      consultationFee = NULL
                   WHERE id = ? AND patientId = ?
                 `,
                 [appointmentDate, appointmentTime, id, patientId],
